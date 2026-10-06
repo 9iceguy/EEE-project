@@ -1,9 +1,5 @@
-// import React from 'react'
+import { Navigate } from "react-router-dom";
 
-const Admindashboard = () => {
-  return (
-    <div>Admindashboard</div>
-  )
+export default function Admindashboard() {
+  return <Navigate to="/portal/hod/dashboard" replace />;
 }
-
-export default Admindashboard

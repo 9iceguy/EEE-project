@@ -1,67 +1,90 @@
-// import React from 'react'
 import { motion } from "framer-motion";
-
+import { Carousel } from "react-responsive-carousel";
+import "react-responsive-carousel/lib/styles/carousel.min.css"; // Import default styles
+import { Link } from "react-router-dom";
 const Hero = () => {
-  const textToAnimate =
-    "Don’t wait for the perfect moment. Take the moment and make it perfect. Consistent effort, even when no one is watching, is what builds greatness over time.";
-  const words =
-    textToAnimate.match(/[\p{L}\p{N}]+[^\s\p{L}\p{N}]?|[^\s]/gu) || [];
-  const containerVariants = {
-    hidden: {
-      opacity: 0,
-    },
-    visible: (i = 1) => ({
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.04 * i,
-      },
-    }),
-  };
-  const childVariants = {
-    hidden: {
-      opacity: 0,
-      y: 20,
-      filter: "blur(10px)",
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      filter: "blur(0px)",
-    },
-  };
+  const images = [
+    "./src/assets/fast1193.webp",
+    "./src/assets/oau.jpg",
+    "./src/assets/OIP (1).webp",
+  ];
+
   return (
-    <div>
-      <div className="hero min-h-screen">
-        <motion.div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            justifyContent: "center",
-          }}
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="text-2xl font-bold text-center mask-r-from-0.5 max-w-5xl leading-relaxed"
+    <div className="relative h-125 overflow-hidden">
+      <Carousel
+        className="absolute inset-0 -z-10"
+        showThumbs={false} // Hide thumbnail previews
+        infiniteLoop={true} // Loop slides
+        autoPlay={true} // Auto play slides
+        interval={3000} // Time between slides (ms)
+        stopOnHover={true} // Pause on hover
+        showStatus={false} // Hide status text
+        swipeable={true} // Enable swipe gestures
+        emulateTouch={true} // Enable touch on desktop
+      >
+        {images.map((src, index) => (
+          <div key={index} className="h-125">
+            <img
+              className="h-full w-full object-cover"
+              src={src}
+              alt={`Slide ${index + 1}`}
+            />
+          </div>
+        ))}
+      </Carousel>
+
+      <div className="absolute inset-0 bg-black/50" />
+
+      <motion.div
+        className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center text-white"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+      >
+        <motion.h1
+          className="text-4xl font-bold md:text-6xl"
+          initial={{ opacity: 0, x: -40 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2, duration: 0.8 }}
         >
-          {words.map((word, index) => (
-            <motion.span
-              key={index}
-              variants={childVariants}
-              transition={{
-                duration: 0.8,
-                ease: [0.25, 0.46, 0.45, 0.94],
-              }}
-              style={{
-                marginRight: "12px",
-                marginTop: "10px",
-              }}
-            >
-              {word}
-            </motion.span>
-          ))}
+          EEE OAU Filing System
+        </motion.h1>
+
+        <motion.p
+          className="mt-4 max-w-2xl text-lg md:text-xl"
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4, duration: 0.8 }}
+        >
+          Streamline your filing process with speed and confidence.
+        </motion.p>
+
+        <motion.div
+          className="mt-8 flex flex-wrap items-center justify-center gap-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.8 }}
+        >
+          <Link
+            to="/register"
+            className="rounded-full bg-blue-600 px-6 py-3 font-semibold text-white shadow-lg transition duration-200 hover:bg-blue-500"
+          >
+            Register
+          </Link>
+          <Link
+            to="/login"
+            className="rounded-full border border-white/60 bg-white/10 px-6 py-3 font-semibold text-white backdrop-blur-sm transition duration-200 hover:bg-white/20"
+          >
+            Login
+          </Link>
+          <Link
+            to="/student/profile"
+            className="rounded-full border border-white/60 bg-transparent px-6 py-3 font-semibold text-white transition duration-200 hover:bg-white/10"
+          >
+            My Profile
+          </Link>
         </motion.div>
-      </div>
+      </motion.div>
     </div>
   );
 };

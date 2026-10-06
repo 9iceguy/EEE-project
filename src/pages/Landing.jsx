@@ -1,10 +1,12 @@
 // import React from 'react'
 import Hero from '../components/Hero'
+import SignupCard from '../components/SignupCard'
 
 const  Landing = () => {
   return (
-    <div classname="bg-black">
+    <div className="">
         <Hero/>
+        <SignupCard/>
     </div>
   )
 }
