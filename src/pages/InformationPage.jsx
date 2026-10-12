@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import Sectionheader from "../components/Sectionheader";
 
 const content = {
   "/help": {
@@ -40,8 +41,7 @@ export default function InformationPage() {
   return (
     <main className="min-h-[65vh] bg-[#080b12] px-4 py-12 text-white sm:px-6">
       <div className="mx-auto max-w-4xl">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">{page.label}</p>
-        <h1 className="mt-3 text-3xl font-black sm:text-4xl">{page.title}</h1>
+        <Sectionheader eyebrow={page.label} title={page.title} level={1} />
         <p className="mt-4 max-w-3xl text-base leading-7 text-slate-400">{page.intro}</p>
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           {page.sections.map(([title, description]) => (

@@ -1,8 +1,32 @@
 // import React from 'react'
 import Navbar from "./Navbar";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 const Header = () => {
+  const { pathname } = useLocation();
+
+  if (pathname === "/register") {
+    return (
+      <header className="flex h-12 items-center justify-between border-b border-slate-200 bg-white px-4 text-slate-950 sm:px-7">
+        <Link to="/register" className="flex items-center gap-2 text-sm font-semibold">
+          <span
+            aria-hidden="true"
+            className="flex size-7 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700"
+          >
+            E
+          </span>
+          Sign Up
+        </Link>
+        <Link
+          to="/login"
+          className="text-xs font-medium text-slate-700 transition hover:text-blue-700"
+        >
+          Sign in
+        </Link>
+      </header>
+    );
+  }
+
   return (
     <div>
       <header

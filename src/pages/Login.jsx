@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import Sectionheader from "../components/Sectionheader";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ const Login = () => {
             onSubmit={loginForm}
             className="w-full max-w-md rounded-2xl border border-blue-400/30 bg-gradient-to-br from-blue-950/80 via-black to-blue-900/60 p-6 shadow-xl shadow-blue-900/30"
           >
-            <h1 className="mb-2 text-center text-3xl font-bold text-white">Login</h1>
+            <Sectionheader eyebrow="EEE OAU · Account access" title="Login" level={1} centered />
             <p className="mb-5 text-center text-sm text-slate-400">Preview a role workspace. Authentication is not connected.</p>
 
             <div className="mb-4 flex flex-col gap-2">
