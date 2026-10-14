@@ -21,6 +21,12 @@ const Navbar = () => {
       >
         About
       </Link>
+      <Link
+        className="rounded-full px-4 py-2 text-sm font-semibold transition hover:bg-blue-500 hover:shadow-2xl"
+        to="/attendance"
+      >
+        Attendance
+      </Link>
     </nav>
   );
 };

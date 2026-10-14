@@ -175,14 +175,355 @@ function Dashboard({ role, navigateTo }) {
   const isStudent = role === "student";
   const isHod = role === "hod";
   const isAdviser = role === "adviser";
-  const title = isStudent ? "Good afternoon, Olumide" : isHod ? "Department at a glance" : isAdviser ? "Welcome, Part Adviser" : "Welcome back, Dr. Adeyemi";
-  const stats = isStudent
-    ? [["Registration", "Draft", "Submit before 18 Oct"], ["Current GPA", "4.12", "Out of 5.00"], ["Outstanding courses", "2", "Review your academic plan"]]
-    : isHod
-      ? [["Students", "486", "Across all levels"], ["Staff", "32", "Department personnel"], ["Pending approvals", "8", "Requires review"]]
-      : isAdviser
-        ? [["Assigned cohort", "64", "300 level"], ["Pending registrations", "12", "Review requested"], ["Open requests", "4", "Awaiting follow-up"]]
-        : [["Assigned courses", "4", "Current semester"], ["Students", "182", "Across your classes"], ["Pending tasks", "6", "Including result drafts"]];
+
+  if (isStudent) {
+    return (
+      <>
+        <style>{`
+          .student-dashboard {
+            color: #1a2940;
+          }
+
+          .student-dashboard-shell {
+            background: #f3f5f8;
+            border: 1px solid rgba(35, 73, 128, 0.16);
+            border-radius: 12px;
+            padding: 0;
+            overflow: hidden;
+          }
+
+          .student-dashboard-top {
+            background: linear-gradient(180deg, #0c3e89 0%, #0d3a7a 100%);
+            padding: 18px 22px 20px;
+            color: #fff;
+          }
+
+          .student-dashboard-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+          }
+
+          .student-dashboard-brand {
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: #f7faff;
+          }
+
+          .student-dashboard-links {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 0.72rem;
+            color: rgba(255,255,255,0.82);
+          }
+
+          .student-dashboard-links a {
+            color: inherit;
+            text-decoration: none;
+          }
+
+          .student-dashboard-links .student-dashboard-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+          }
+
+          .student-dashboard-hero {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            margin-top: 18px;
+            padding: 0 4px 0 2px;
+          }
+
+          .student-dashboard-profile {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+          }
+
+          .student-dashboard-avatar {
+            display: grid;
+            place-items: center;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.24);
+            font-size: 1.1rem;
+            font-weight: 700;
+          }
+
+          .student-dashboard-name {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+          }
+
+          .student-dashboard-meta {
+            margin: 4px 0 0;
+            font-size: 0.72rem;
+            color: rgba(255,255,255,0.8);
+          }
+
+          .student-dashboard-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+          }
+
+          .student-dashboard-btn {
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 7px;
+            padding: 9px 15px;
+            background: rgba(255,255,255,0.08);
+            color: #f4f7ff;
+            font-size: 0.74rem;
+            font-weight: 600;
+            cursor: pointer;
+          }
+
+          .student-dashboard-btn.primary {
+            background: #0d5bd5;
+            border-color: rgba(255,255,255,0.6);
+          }
+
+          .student-dashboard-content {
+            background: #edf3f7;
+            padding: 20px 18px 18px;
+            border-top: 1px solid rgba(18, 54, 112, 0.13);
+          }
+
+          .student-dashboard-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 12px;
+          }
+
+          .student-dashboard-title h3 {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #152741;
+          }
+
+          .student-dashboard-card {
+            background: #ffffff;
+            border: 1px solid rgba(28, 64, 117, 0.14);
+            border-radius: 10px;
+            box-shadow: 0 6px 15px rgba(17, 36, 65, 0.04);
+          }
+
+          .student-dashboard-overview {
+            padding: 14px 18px 8px;
+          }
+
+          .student-dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 8px;
+          }
+
+          .student-dashboard-field {
+            background: #f7f9fb;
+            border: 1px solid rgba(31, 63, 104, 0.08);
+            border-radius: 8px;
+            padding: 10px 12px;
+          }
+
+          .student-dashboard-field span {
+            display: block;
+            font-size: 0.7rem;
+            color: #58708b;
+            margin-bottom: 4px;
+          }
+
+          .student-dashboard-field strong {
+            font-size: 0.86rem;
+            color: #1c2d44;
+          }
+
+          .student-dashboard-status {
+            margin-top: 18px;
+            padding: 14px 18px 16px;
+          }
+
+          .student-dashboard-status table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            font-size: 0.8rem;
+          }
+
+          .student-dashboard-status th,
+          .student-dashboard-status td {
+            padding: 10px 8px;
+            text-align: left;
+            border-bottom: 1px solid rgba(31, 63, 104, 0.09);
+            color: #24354b;
+          }
+
+          .student-dashboard-status th {
+            color: #576d89;
+            font-size: 0.7rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+          }
+
+          .student-dashboard-status .positive {
+            color: #0d6b47;
+            font-weight: 600;
+          }
+
+          .student-dashboard-status .muted {
+            color: #5d6e87;
+          }
+
+          .student-dashboard-footer {
+            margin-top: 12px;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #75849a;
+          }
+
+          @media (max-width: 820px) {
+            .student-dashboard-grid {
+              grid-template-columns: 1fr;
+            }
+
+            .student-dashboard-header,
+            .student-dashboard-hero,
+            .student-dashboard-title {
+              flex-direction: column;
+              align-items: flex-start;
+            }
+          }
+        `}</style>
+
+        <div className="student-dashboard">
+          <div className="student-dashboard-shell">
+            <div className="student-dashboard-top">
+              <div className="student-dashboard-header">
+                <div className="student-dashboard-brand">Student Page</div>
+                <div className="student-dashboard-links">
+                  <a href="#">Dashboard</a>
+                  <a href="#">Academic</a>
+                  <a href="#">Results</a>
+                  <a href="#" className="student-dashboard-pill">Button</a>
+                </div>
+              </div>
+
+              <div className="student-dashboard-hero">
+                <div className="student-dashboard-profile">
+                  <div className="student-dashboard-avatar">JA</div>
+                  <div>
+                    <p className="student-dashboard-name">John A. Okafor</p>
+                    <p className="student-dashboard-meta">Student ID: EEE/2022/014 · 300 Level</p>
+                  </div>
+                </div>
+
+                <div className="student-dashboard-actions">
+                  <button type="button" className="student-dashboard-btn">Notifications</button>
+                  <button type="button" className="student-dashboard-btn primary">View Results</button>
+                </div>
+              </div>
+            </div>
+
+            <div className="student-dashboard-content">
+              <div className="student-dashboard-title">
+                <h3>Student Overview</h3>
+              </div>
+
+              <div className="student-dashboard-card student-dashboard-overview">
+                <div className="student-dashboard-grid">
+                  <div className="student-dashboard-field">
+                    <span>Student Name</span>
+                    <strong>John A. Okafor</strong>
+                  </div>
+                  <div className="student-dashboard-field">
+                    <span>Matriculation Number</span>
+                    <strong>EEE/2022/014</strong>
+                  </div>
+                  <div className="student-dashboard-field">
+                    <span>Level / Part</span>
+                    <strong>300 / 2</strong>
+                  </div>
+                  <div className="student-dashboard-field">
+                    <span>Department / Programme</span>
+                    <strong>Electrical & Electronic Engineering</strong>
+                  </div>
+                  <div className="student-dashboard-field">
+                    <span>Current Academic Session</span>
+                    <strong>2026/2027</strong>
+                  </div>
+                  <div className="student-dashboard-field">
+                    <span>Current Semester</span>
+                    <strong>First Semester</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="student-dashboard-card student-dashboard-status">
+                <div className="student-dashboard-title" style={{ marginBottom: 0 }}>
+                  <h3>Student Status</h3>
+                </div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Course</th>
+                      <th>Units</th>
+                      <th>Grade</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>EEE 301</td>
+                      <td>3</td>
+                      <td className="positive">A</td>
+                      <td className="positive">Pass</td>
+                    </tr>
+                    <tr>
+                      <td>EEE 305</td>
+                      <td>3</td>
+                      <td className="positive">B</td>
+                      <td className="positive">Pass</td>
+                    </tr>
+                    <tr>
+                      <td>EEE 303</td>
+                      <td>2</td>
+                      <td className="muted">C</td>
+                      <td className="muted">In review</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="student-dashboard-footer">© 2026 University Student Portal · Privacy · Terms</div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  const title = isHod ? "Department at a glance" : isAdviser ? "Welcome, Part Adviser" : "Welcome back, Dr. Adeyemi";
+  const stats = isHod
+    ? [["Students", "486", "Across all levels"], ["Staff", "32", "Department personnel"], ["Pending approvals", "8", "Requires review"]]
+    : isAdviser
+      ? [["Assigned cohort", "64", "300 level"], ["Pending registrations", "12", "Review requested"], ["Open requests", "4", "Awaiting follow-up"]]
+      : [["Assigned courses", "4", "Current semester"], ["Students", "182", "Across your classes"], ["Pending tasks", "6", "Including result drafts"]];
   const announcements = [
     ["Course registration deadline", "Submit and review course selections by 18 October.", "Today"],
     ["Department seminar", "Seminar room 2, Friday at 2:00 PM.", "Yesterday"],
@@ -197,11 +538,9 @@ function Dashboard({ role, navigateTo }) {
       <div className="mt-6 grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
         <Panel title={isStudent ? "Next steps" : "Needs your attention"} subtitle="Your most important pending items">
           <div className="space-y-3">
-            {(isStudent
-              ? [["Complete course selection", "Choose courses for 2026/2027, first semester.", "courses", "Continue registration"], ["Review your academic record", "Check results and outstanding courses.", "results", "View results"]]
-              : isHod || isAdviser
-                ? [["Review course registrations", "Several student submissions are awaiting review.", "approvals", "Open approval queue"], ["Check department activity", "Review current workloads and open requests.", "reports", "View activity"]]
-                : [["Prepare result submissions", "Save a draft before the departmental deadline.", "results", "Manage results"], ["Check assigned classes", "Review enrolment and course resources.", "courses", "Open courses"]]
+            {(isHod || isAdviser
+              ? [["Review course registrations", "Several student submissions are awaiting review.", "approvals", "Open approval queue"], ["Check department activity", "Review current workloads and open requests.", "reports", "View activity"]]
+              : [["Prepare result submissions", "Save a draft before the departmental deadline.", "results", "Manage results"], ["Check assigned classes", "Review enrolment and course resources.", "courses", "Open courses"]]
             ).map(([titleText, detail, section, action]) => (
               <div key={titleText} className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-black/30 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div><h3 className="font-semibold text-white">{titleText}</h3><p className="mt-1 text-sm text-slate-400">{detail}</p></div>

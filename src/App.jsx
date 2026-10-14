@@ -9,6 +9,7 @@ import PortalNotice from "./pages/PortalNotice";
 import InformationPage from "./pages/InformationPage";
 import Admindashboard from "./pages/Admindashboard";
 import Studentprofile from "./pages/Studentprofile";
+import AttendanceDashboard from "./pages/AttendanceDashboard";
 
 const Portal = lazy(() => import("./pages/Portal"));
 
@@ -21,6 +22,7 @@ function App() {
             <Route path="/" element={<AppLayout />}>
               <Route index element={<Landing />} />
               <Route path="admin" element={<Admindashboard />} />
+              <Route path="attendance" element={<AttendanceDashboard />} />
               <Route path="student" element={<Studentprofile />} />
               <Route path="student/profile" element={<Navigate to="/portal/student/profile" replace />} />
               <Route path="portal/:role/:section?" element={<Portal />} />

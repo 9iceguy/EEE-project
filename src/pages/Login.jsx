@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import Sectionheader from "../components/Sectionheader";
+import Sectionheader from "../Components/Sectionheader";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -20,92 +20,502 @@ const Login = () => {
       return;
     }
 
+    try {
+      sessionStorage.setItem(
+        "eeePortalSession",
+        JSON.stringify({ email: email.trim().toLowerCase(), role }),
+      );
+    } catch {
+      toast.error("Unable to start a demo session in this browser.", {
+        position: "top-center",
+      });
+      return;
+    }
+
     setPassword("");
     toast.info("Demo access only: authentication is not connected.", { position: "top-center" });
     navigate(`/portal/${role}/dashboard`);
   };
 
   return (
-    <div className="min-h-[80vh] bg-[#0b0b0b] px-4 py-8 text-white">
-      <div className="mx-auto max-w-6xl">
-        <Link to="/">
-          <button className="mt-2 rounded-md bg-blue-600 px-6 py-2 text-white transition hover:bg-blue-950">
-            Home
-          </button>
-        </Link>
+    <>
+      <style>{`
+        .login-page {
+          min-height: 100vh;
+          background: #121212;
+          font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+          color: #0b1f38;
+        }
 
-        <div className="flex min-h-[70vh] items-center justify-center">
-          <form
-            onSubmit={loginForm}
-            className="w-full max-w-md rounded-2xl border border-blue-400/30 bg-gradient-to-br from-blue-950/80 via-black to-blue-900/60 p-6 shadow-xl shadow-blue-900/30"
-          >
-            <Sectionheader eyebrow="EEE OAU · Account access" title="Login" level={1} centered />
-            <p className="mb-5 text-center text-sm text-slate-400">Preview a role workspace. Authentication is not connected.</p>
+        .login-shell {
+          max-width: 980px;
+          margin: 0 auto;
+          padding: 18px 18px 32px;
+        }
 
-            <div className="mb-4 flex flex-col gap-2">
-              <label htmlFor="login-email" className="text-sm font-medium text-blue-100">Institutional email:</label>
-              <input
-                id="login-email"
-                className="rounded-lg border border-gray-700 bg-white/10 p-3 text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500"
-                type="email"
-                name="email"
-                autoComplete="username"
-                placeholder="Email address"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
+        .login-topbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 8px 18px;
+          color: #f4f7ff;
+        }
 
-            <div className="mb-6 flex flex-col gap-2">
-              <label htmlFor="login-password" className="text-sm font-medium text-blue-100">Password:</label>
-              <input
-                id="login-password"
-                className="rounded-lg border border-gray-700 bg-white/10 p-3 text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500"
-                type="password"
-                name="password"
-                autoComplete="current-password"
-                placeholder="Password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+        .login-brand {
+          font-size: 1.15rem;
+          font-weight: 700;
+          letter-spacing: 0.02em;
+          color: #f2f6ff;
+          text-decoration: none;
+        }
 
-            <label className="mb-6 flex flex-col gap-2 text-sm font-medium text-blue-100">
-              Preview role:
-              <select
-                className="rounded-lg border border-gray-700 bg-slate-900 p-3 text-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500"
-                value={role}
-                onChange={(event) => setRole(event.target.value)}
-              >
-                <option value="student">Student</option>
-                <option value="staff">Staff / Lecturer</option>
-                <option value="hod">Head of Department</option>
-                <option value="adviser">Part Adviser</option>
-              </select>
-            </label>
+        .login-links {
+          display: flex;
+          align-items: center;
+          gap: 24px;
+          font-size: 0.82rem;
+          color: rgba(255, 255, 255, 0.8);
+        }
 
-            <button
-              className="w-full rounded-md bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-500"
-              type="submit"
-            >
-              Login
-            </button>
+        .login-links a {
+          color: inherit;
+          text-decoration: none;
+        }
 
-            <p className="mt-6 text-center text-sm text-slate-300">
-              Don&apos;t have an account?{" "}
-              <Link to="/register" className="font-semibold text-blue-300 hover:text-blue-200">
+        .login-links .link-pill {
+          padding: 8px 14px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .welcome-panel {
+          background: linear-gradient(180deg, #0f3f89 0%, #0e3d8b 100%);
+          border-radius: 16px 16px 0 0;
+          padding: 12px 18px 18px;
+          box-shadow: 0 12px 40px rgba(7, 27, 76, 0.38);
+        }
+
+        .welcome-inner {
+          max-width: 320px;
+          margin: 0 auto;
+          text-align: center;
+        }
+
+        .welcome-inner h1 {
+          margin: 8px 0 0;
+          font-size: clamp(1.7rem, 3vw, 2.2rem);
+          line-height: 1.2;
+          font-weight: 700;
+          color: #f4f7ff;
+        }
+
+        .welcome-inner p {
+          margin: 8px 0 0;
+          font-size: 0.76rem;
+          color: rgba(255, 255, 255, 0.84);
+        }
+
+        .hero-form {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          margin-top: 18px;
+        }
+
+        .hero-form .field {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+        }
+
+        .hero-form label {
+          font-size: 0.73rem;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.74);
+        }
+
+        .hero-form input {
+          width: 100%;
+          padding: 12px 12px;
+          border: 1px solid rgba(255, 255, 255, 0.26);
+          border-radius: 8px;
+          outline: none;
+          background: rgba(255, 255, 255, 0.08);
+          color: #ffffff;
+          font-size: 0.87rem;
+          box-sizing: border-box;
+        }
+
+        .hero-form input::placeholder {
+          color: rgba(255, 255, 255, 0.5);
+        }
+
+        .hero-form input:focus {
+          border-color: rgba(255, 255, 255, 0.74);
+          box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+        }
+
+        .hero-actions {
+          display: flex;
+          justify-content: center;
+          gap: 12px;
+          margin-top: 18px;
+        }
+
+        .button {
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 8px;
+          padding: 10px 18px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .button.secondary {
+          background: rgba(255, 255, 255, 0.08);
+          color: #edf4ff;
+        }
+
+        .button.primary {
+          background: #0b56d4;
+          border-color: rgba(255, 255, 255, 0.8);
+          color: #f4f7ff;
+        }
+
+        .button:hover {
+          filter: brightness(1.05);
+          transform: translateY(-1px);
+        }
+
+        .login-card {
+          background: #eef3f8;
+          border: 2px dashed rgba(72, 124, 234, 0.8);
+          border-top: none;
+          border-radius: 0 0 12px 12px;
+          padding: 24px 22px 18px;
+          box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+        }
+
+        .login-grid {
+          display: grid;
+          grid-template-columns: 1.05fr 1fr;
+          gap: 22px;
+          align-items: center;
+        }
+
+        .login-panel h2 {
+          margin: 0 0 10px;
+          font-size: clamp(1.8rem, 2vw, 2.25rem);
+          font-weight: 700;
+          color: #1a2d48;
+        }
+
+        .login-panel p {
+          margin: 0 0 18px;
+          font-size: 0.76rem;
+          color: #586b87;
+        }
+
+        .login-form {
+          display: grid;
+          gap: 12px;
+        }
+
+        .login-form label {
+          display: grid;
+          gap: 7px;
+          font-size: 0.72rem;
+          font-weight: 600;
+          color: #3d4d63;
+        }
+
+        .login-form input {
+          width: 100%;
+          border-radius: 8px;
+          border: 1px solid #c8d2e2;
+          background: rgba(255, 255, 255, 0.72);
+          padding: 11px 12px;
+          font-size: 0.9rem;
+          box-sizing: border-box;
+          color: #1b2b3b;
+        }
+
+        .login-form input::placeholder {
+          color: #7d8ca1;
+        }
+
+        .login-form input:focus {
+          outline: none;
+          border-color: #3c8dff;
+          box-shadow: 0 0 0 3px rgba(60, 141, 255, 0.18);
+        }
+
+        .login-helper {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: 4px;
+          margin-bottom: 6px;
+          font-size: 0.74rem;
+        }
+
+        .login-helper a {
+          color: #1e6fe6;
+          text-decoration: none;
+        }
+
+        .checkbox-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-top: 6px;
+          margin-bottom: 2px;
+        }
+
+        .check-wrap {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          color: #56708f;
+          font-size: 0.72rem;
+        }
+
+        .check-wrap input {
+          width: auto;
+          accent-color: #0e54d8;
+        }
+
+        .login-actions {
+          display: flex;
+          gap: 10px;
+          margin-top: 14px;
+        }
+
+        .login-actions .button {
+          flex: 1;
+        }
+
+        .button.dark {
+          background: #0d213c;
+          color: white;
+          border-color: #0d213c;
+        }
+
+        .visual {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+        }
+
+        .visual-frame {
+          width: 100%;
+          max-width: 360px;
+          aspect-ratio: 1.25;
+          border-radius: 12px;
+          overflow: hidden;
+          border: 1px solid rgba(31, 69, 126, 0.15);
+          background-image: url("https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=80");
+          background-size: cover;
+          background-position: center;
+          box-shadow: 0 10px 28px rgba(34, 57, 89, 0.18);
+        }
+
+        .visual-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 220px;
+          padding: 10px 18px;
+          background: #1f5adf;
+          border-radius: 10px;
+          color: #ffffff;
+          font-weight: 700;
+          font-size: 0.72rem;
+          letter-spacing: 0.04em;
+          box-shadow: 0 8px 18px rgba(31, 90, 223, 0.25);
+        }
+
+        .new-here {
+          text-align: center;
+          margin-top: 18px;
+          font-weight: 700;
+          font-size: 1rem;
+          color: #1b2940;
+        }
+
+        @media (max-width: 700px) {
+          .hero-form,
+          .login-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .login-links {
+            gap: 12px;
+            font-size: 0.72rem;
+          }
+
+          .login-shell {
+            padding-left: 12px;
+            padding-right: 12px;
+          }
+        }
+      `}</style>
+
+      <div className="login-page">
+        <div className="login-shell">
+          <header className="login-topbar">
+            <Sectionheader className="login-brand" aria-label="Brand logo " title="Login"/>
+              
+
+            <nav className="login-links" aria-label="Main navigation">
+            
+              <a href="#" className="link-pill">
                 Sign up
-              </Link>
-            </p>
-            <Link to="/recover-password" className="mt-3 block text-center text-sm text-blue-300 hover:text-blue-200">
-              Forgot password?
-            </Link>
-          </form>
+              </a>
+            </nav>
+          </header>
+
+          <section className="welcome-panel" aria-label="Welcome banner">
+            <div className="welcome-inner">
+              <h1>Welcome back</h1>
+              <p>Log in to continue to your dashboard</p>
+            </div>
+
+            <form onSubmit={loginForm} className="hero-form">
+              <div className="field">
+                <label htmlFor="login-email">Email</label>
+                <input
+                  id="login-email"
+                  type="email"
+                  name="email"
+                  autoComplete="username"
+                  placeholder="Email address"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="login-password">Password</label>
+                <input
+                  id="login-password"
+                  type="password"
+                  name="password"
+                  autoComplete="current-password"
+                  placeholder="Password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+            </form>
+
+            <div className="hero-actions">
+              <button type="button" className="button secondary">
+                Create account
+              </button>
+              <button type="submit" className="button primary" form="login-form-main">
+                Log in
+              </button>
+            </div>
+          </section>
+
+          <section className="login-card" aria-label="Sign in section">
+            <div className="login-grid">
+              <div className="login-panel">
+                <h2>Sign in</h2>
+                <p>Use your email address and password to sign in.</p>
+
+                <form id="login-form-main" onSubmit={loginForm} className="login-form">
+                  <label htmlFor="signin-email">
+                    Email address
+                    <input
+                      id="signin-email"
+                      type="email"
+                      name="email"
+                      autoComplete="username"
+                      placeholder="name@example.com"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </label>
+
+                  <label htmlFor="signin-password">
+                    Password
+                    <input
+                      id="signin-password"
+                      type="password"
+                      name="password"
+                      autoComplete="current-password"
+                      placeholder="Password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </label>
+
+                  <div className="login-helper">
+                    <span>Remember me</span>
+                    <Link to="/recover-password">Forgot password?</Link>
+                  </div>
+
+                  <div className="checkbox-row">
+                    <label className="check-wrap">
+                      <input type="checkbox" defaultChecked />
+                      Keep me signed in
+                    </label>
+                    <select
+                      aria-label="Select role"
+                      value={role}
+                      onChange={(event) => setRole(event.target.value)}
+                      style={{
+                        border: "1px solid #c8d2e2",
+                        borderRadius: "8px",
+                        background: "rgba(255,255,255,0.72)",
+                        padding: "8px 10px",
+                        color: "#334863",
+                        fontSize: "0.72rem",
+                      }}
+                    >
+                      <option value="student">Student</option>
+                      <option value="staff">Staff</option>
+                      <option value="hod">Department</option>
+                      <option value="adviser">Advisor</option>
+                    </select>
+                  </div>
+
+                  <div className="login-actions">
+                    <button type="button" className="button secondary">
+                      Create account
+                    </button>
+                    <button type="submit" className="button dark">
+                      Log in
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <div className="visual">
+                <div className="visual-frame" aria-label="Student learning" />
+            
+              </div>
+            </div>
+          </section>
+
+          <div className="new-here">
+            <Link to="/register">New here?</Link>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
