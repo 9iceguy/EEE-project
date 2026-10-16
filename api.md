@@ -13,9 +13,10 @@ prototype contain additional workflows that are not active backend APIs.
 
 **Implemented** means that an operation exists in the active backend. It does
 not mean that its React screen, shared PostgreSQL integration or production
-deployment has been completed. All JavaScript and JSX below are commented
-integration examples; this document does not install a React application or
-connect the existing prototype to Django.
+deployment has been completed. The React app now has a shared API client for
+documented implemented routes and uses it for session authentication and
+password-reset requests. Most portal workflows remain prototypes and are not
+connected to these APIs.
 
 ## Contents
 
@@ -146,17 +147,16 @@ for HTTP errors, so the client must check `response.ok`. See [MDN's Fetch respon
 
 ### 3.1 Same-origin React setup
 
-Use relative `/api/...` URLs. Configure the chosen React development server to
-proxy `/api` to Django, commonly `http://127.0.0.1:8000`. The browser should see
-one origin for the React page and its API requests. Production should likewise
-route `/api` to Django under the frontend's HTTPS origin.
+Use relative `/api/...` URLs. Vite proxies `/api` to Django at
+`http://127.0.0.1:8000` by default; set `VITE_API_PROXY_TARGET` when the backend
+uses a different address. The browser sees one origin for the React page and
+its API requests. Production should likewise route `/api` to Django under the
+frontend's HTTPS origin.
 
-The repository has standalone frontend prototypes, not a configured React
-development server. Proxy installation is still integration work. No permissive
-CORS middleware or bearer/JWT authentication is currently configured. Calling
-Django directly from a different browser origin requires a separately completed
-deployment/authentication configuration; `credentials: "include"` by itself
-does not solve CORS or cookie policy.
+No permissive CORS middleware or bearer/JWT authentication is configured.
+Calling Django directly from a different browser origin requires a separately
+completed deployment/authentication configuration; `credentials: "include"`
+by itself does not solve CORS or cookie policy.
 
 Backend origin/host settings come from `DJANGO_ALLOWED_HOSTS` and
 `DJANGO_CSRF_TRUSTED_ORIGINS`. Configure them for the actual proxy arrangement.
@@ -211,10 +211,10 @@ unfinished. The backend checks authorization on every request.
 
 ## 4. Shared commented React API client
 
-The blocks in sections 4–9 can be assembled, in order, into a future
-`frontend/src/api.js`. They use browser APIs and contain no React-specific
-dependency, so components can share them. This is a suggested module location;
-the file is not created by this documentation change.
+The shared `frontend/src/api.js` module implements the transport and named
+methods for the active endpoint catalog in sections 5–9. It uses browser APIs
+and has no React-specific dependency, so screens can share it. Unsupported
+prototype workflows are intentionally not represented as working API calls.
 
 ```javascript
 // Keep the CSRF token only in this browser tab's module memory.

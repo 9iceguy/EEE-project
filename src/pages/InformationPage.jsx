@@ -15,11 +15,11 @@ const content = {
   "/privacy": {
     label: "Privacy",
     title: "Your information and privacy",
-    intro: "This frontend is a demonstration. It uses illustrative records and does not connect to a department database or store portal data.",
+    intro: "Sign-in and password-reset requests use the departmental API. Most portal screens still show illustrative records and do not yet load or save academic data.",
     sections: [
       ["Use of personal information", "A production portal should only collect information required for academic administration and should restrict access by role."],
       ["Academic records", "Student records, advising notes and results should only be available to authorised users and should be protected by server-side access controls."],
-      ["Prototype warning", "Do not submit real credentials or personal information in this prototype. Authentication, persistence, file storage and audit logging must be connected and reviewed before production use."],
+      ["Prototype warning", "Use an institutional account only when the approved API is configured. Academic workflows, file storage and audit logging still require implementation and production review."],
     ],
   },
   "/about": {

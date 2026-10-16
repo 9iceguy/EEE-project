@@ -1,42 +1,35 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import Sectionheader from "../Components/Sectionheader";
+import Sectionheader from "../components/Sectionheader";
+import { useAuth } from "../auth/useAuth";
 
 const Login = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const { signIn } = useAuth();
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("student");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const loginForm = (e) => {
-    e.preventDefault();
-
-    if (!email.trim() || !password.trim()) {
-      toast.error("Please fill in all fields", {
-        position: "top-center",
-        draggable: true,
-      });
-      return;
-    }
-
+  const loginForm = async (event) => {
+    event.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
-      sessionStorage.setItem(
-        "eeePortalSession",
-        JSON.stringify({ email: email.trim().toLowerCase(), role }),
-      );
-    } catch {
-      toast.error("Unable to start a demo session in this browser.", {
+      const identity = await signIn(username.trim(), password);
+      setPassword("");
+      toast.success("Signed in successfully.", { position: "top-center" });
+      navigate(`/portal/${identity.role}/dashboard`);
+    } catch (error) {
+      const retryAfter = error.retryAfter
+        ? ` The server asked you to wait: ${error.retryAfter}.`
+        : "";
+      toast.error(`${error.message || "Unable to sign in."}${retryAfter}`, {
         position: "top-center",
       });
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setPassword("");
-    toast.info("Demo access only: authentication is not connected.", {
-      position: "top-center",
-    });
-    navigate(`/portal/${role}/dashboard`);
   };
 
   return (
@@ -175,6 +168,7 @@ const Login = () => {
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s ease;
+          text-decoration: none;
         }
 
         .button.secondary {
@@ -439,50 +433,7 @@ const Login = () => {
           <section className="welcome-panel" aria-label="Welcome banner">
             <div className="welcome-inner">
               <h1>Welcome back</h1>
-              <p>Log in to continue to your dashboard</p>
-            </div>
-
-            <form onSubmit={loginForm} className="hero-form">
-              <div className="field">
-                <label htmlFor="login-email">Email</label>
-                <input
-                  id="login-email"
-                  type="email"
-                  name="email"
-                  autoComplete="username"
-                  placeholder="Email address"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-
-              <div className="field">
-                <label htmlFor="login-password">Password</label>
-                <input
-                  id="login-password"
-                  type="password"
-                  name="password"
-                  autoComplete="current-password"
-                  placeholder="Password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </form>
-
-            <div className="hero-actions">
-              <button type="button" className="button secondary">
-                Create account
-              </button>
-              <button
-                type="submit"
-                className="button primary"
-                form="login-form-main"
-              >
-                Log in
-              </button>
+              <p>Sign in with your institutional account to continue.</p>
             </div>
           </section>
 
@@ -490,24 +441,24 @@ const Login = () => {
             <div className="login-grid">
               <div className="login-panel">
                 <h2>Sign in</h2>
-                <p>Use your email address and password to sign in.</p>
+                <p>Use the username and password issued for your account.</p>
 
                 <form
                   id="login-form-main"
                   onSubmit={loginForm}
                   className="login-form"
                 >
-                  <label htmlFor="signin-email">
-                    Email address
+                  <label htmlFor="signin-username">
+                    Username
                     <input
-                      id="signin-email"
-                      type="email"
-                      name="email"
+                      id="signin-username"
+                      type="text"
+                      name="username"
                       autoComplete="username"
-                      placeholder="name@example.com"
+                      placeholder="Your username"
                       required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      value={username}
+                      onChange={(event) => setUsername(event.target.value)}
                     />
                   </label>
 
@@ -526,41 +477,16 @@ const Login = () => {
                   </label>
 
                   <div className="login-helper">
-                    <span>Remember me</span>
+                    <span>Secure session authentication</span>
                     <Link to="/recover-password">Forgot password?</Link>
                   </div>
 
-                  <div className="checkbox-row">
-                    <label className="check-wrap">
-                      <input type="checkbox" defaultChecked />
-                      Keep me signed in
-                    </label>
-                    <select
-                      aria-label="Select role"
-                      value={role}
-                      onChange={(event) => setRole(event.target.value)}
-                      style={{
-                        border: "1px solid #c8d2e2",
-                        borderRadius: "8px",
-                        background: "rgba(255,255,255,0.72)",
-                        padding: "8px 10px",
-                        color: "#334863",
-                        fontSize: "0.72rem",
-                      }}
-                    >
-                      <option value="student">Student</option>
-                      <option value="staff">Staff</option>
-                      <option value="hod">Department</option>
-                      <option value="adviser">Advisor</option>
-                    </select>
-                  </div>
-
                   <div className="login-actions">
-                    <button type="button" className="button secondary">
-                      Create account
-                    </button>
-                    <button type="submit" className="button dark">
-                      Log in
+                    <Link to="/register" className="button secondary">
+                      Request an account
+                    </Link>
+                    <button type="submit" className="button dark" disabled={isSubmitting}>
+                      {isSubmitting ? "Signing in..." : "Sign in"}
                     </button>
                   </div>
                 </form>

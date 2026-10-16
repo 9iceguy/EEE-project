@@ -1,9 +1,25 @@
 // import React from 'react'
 import Navbar from "./Navbar";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { useAuth } from "../auth/useAuth";
 
 const Header = () => {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success("You have signed out.", { position: "top-center" });
+      navigate("/login");
+    } catch (error) {
+      toast.error(error.message || "Unable to sign out.", {
+        position: "top-center",
+      });
+    }
+  };
 
   if (pathname === "/register") {
     return (
@@ -49,7 +65,30 @@ const Header = () => {
             </div>
           </div>
         </Link>
-        <Navbar />
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <Navbar />
+          {user ? (
+            <div className="flex items-center gap-3">
+              <span className="max-w-40 truncate text-xs font-medium text-slate-700">
+                {user.username}
+              </span>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold transition hover:border-blue-600 hover:text-blue-700"
+              >
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/login"
+              className="rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold transition hover:border-blue-600 hover:text-blue-700"
+            >
+              Sign in
+            </Link>
+          )}
+        </div>
       </header>
     </div>
   );
