@@ -352,6 +352,7 @@ function Dashboard({ role, navigateTo }) {
           .student-dashboard-field strong {
             font-size: 0.86rem;
             color: #1c2d44;
+            overflow-wrap: anywhere;
           }
 
           .student-dashboard-status {
@@ -364,6 +365,10 @@ function Dashboard({ role, navigateTo }) {
             border-collapse: collapse;
             margin-top: 8px;
             font-size: 0.8rem;
+          }
+
+          .student-dashboard-table-wrap {
+            overflow-x: auto;
           }
 
           .student-dashboard-status th,
@@ -407,6 +412,14 @@ function Dashboard({ role, navigateTo }) {
             .student-dashboard-title {
               flex-direction: column;
               align-items: flex-start;
+            }
+
+            .student-dashboard-links {
+              flex-wrap: wrap;
+            }
+
+            .student-dashboard-status table {
+              min-width: 420px;
             }
           }
         `}</style>
@@ -478,36 +491,38 @@ function Dashboard({ role, navigateTo }) {
                 <div className="student-dashboard-title" style={{ marginBottom: 0 }}>
                   <h3>Student Status</h3>
                 </div>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Course</th>
-                      <th>Units</th>
-                      <th>Grade</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>EEE 301</td>
-                      <td>3</td>
-                      <td className="positive">A</td>
-                      <td className="positive">Pass</td>
-                    </tr>
-                    <tr>
-                      <td>EEE 305</td>
-                      <td>3</td>
-                      <td className="positive">B</td>
-                      <td className="positive">Pass</td>
-                    </tr>
-                    <tr>
-                      <td>EEE 303</td>
-                      <td>2</td>
-                      <td className="muted">C</td>
-                      <td className="muted">In review</td>
-                    </tr>
-                  </tbody>
-                </table>
+                <div className="student-dashboard-table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Course</th>
+                        <th>Units</th>
+                        <th>Grade</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>EEE 301</td>
+                        <td>3</td>
+                        <td className="positive">A</td>
+                        <td className="positive">Pass</td>
+                      </tr>
+                      <tr>
+                        <td>EEE 305</td>
+                        <td>3</td>
+                        <td className="positive">B</td>
+                        <td className="positive">Pass</td>
+                      </tr>
+                      <tr>
+                        <td>EEE 303</td>
+                        <td>2</td>
+                        <td className="muted">C</td>
+                        <td className="muted">In review</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               <div className="student-dashboard-footer">© 2026 University Student Portal · Privacy · Terms</div>

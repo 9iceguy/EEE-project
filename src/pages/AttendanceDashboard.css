@@ -338,6 +338,7 @@
 }
 
 .scanner-panel,
+.scan-upload-panel,
 .records-panel,
 .access-panel {
   margin-top: 16px;
@@ -465,6 +466,118 @@
 .scanner-action button:hover,
 .authorize-form button:hover {
   background: #1f4789;
+}
+
+.scan-upload-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 18px;
+  padding: 17px 20px;
+}
+
+.scan-upload-copy {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.scan-upload-icon {
+  display: grid;
+  width: 35px;
+  height: 35px;
+  flex: 0 0 35px;
+  place-items: center;
+  border-radius: 9px;
+  background: #edf3fc;
+  color: #3d6ead;
+  font-size: 20px;
+}
+
+.scan-upload-copy h2 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.scan-upload-copy p {
+  margin: 5px 0 0;
+  color: #7d8999;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.scan-upload-button {
+  position: relative;
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dce3ed;
+  border-radius: 6px;
+  padding: 0 13px;
+  background: #fff;
+  color: #425573;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.scan-upload-button:hover,
+.scan-upload-button:focus-within {
+  border-color: #9bb2d4;
+  background: #fafdff;
+}
+
+.scan-upload-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.scan-upload-result,
+.scan-upload-error,
+.scan-upload-format {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+.scan-upload-result {
+  color: #39865e;
+}
+
+.scan-upload-error {
+  border-radius: 6px;
+  padding: 9px 11px;
+  background: #fff2f0;
+  color: #a4473c;
+}
+
+.scan-upload-format {
+  color: #7d8999;
+}
+
+.scan-upload-format summary {
+  width: fit-content;
+  cursor: pointer;
+  color: #536b8d;
+  font-weight: 650;
+}
+
+.scan-upload-format pre {
+  overflow-x: auto;
+  margin: 9px 0 2px;
+  border-radius: 6px;
+  padding: 10px;
+  background: #f6f8fb;
+  color: #526176;
+  font: 9px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
 .records-panel,
@@ -789,48 +902,56 @@
 }
 
 @media (max-width: 680px) {
+  .attendance-app {
+    flex-direction: column;
+  }
+
   .attendance-sidebar {
     position: static;
-    flex-basis: 56px;
-    align-items: center;
-    padding: 16px 7px;
+    flex: 0 0 auto;
+    height: auto;
+    padding: 14px;
   }
 
   .attendance-brand {
-    padding: 0 0 20px;
+    padding: 0 0 12px;
   }
 
-  .attendance-brand > span:last-child,
-  .attendance-nav-label,
-  .attendance-nav a:not(.active),
-  .attendance-nav a.active,
-  .attendance-nav button,
-  .attendance-sidebar-bottom .sidebar-device,
-  .sidebar-signout .attendance-icon {
-    font-size: 0;
+  .attendance-nav-label {
+    display: none;
+  }
+
+  .attendance-nav {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
   }
 
   .attendance-nav a,
   .attendance-nav button,
   .sidebar-signout {
-    width: 40px;
-    height: 40px;
-    justify-content: center;
-    padding: 0;
+    width: auto;
+    min-height: 40px;
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    padding: 9px 11px;
+    font-size: 11px;
   }
 
-  .attendance-nav .attendance-icon,
-  .sidebar-signout .attendance-icon {
+  .attendance-nav .attendance-icon {
     font-size: 17px;
   }
 
   .attendance-sidebar-bottom {
-    justify-items: center;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
   }
 
   .sidebar-signout {
-    overflow: hidden;
-    font-size: 0;
+    flex: 0 0 auto;
   }
 
   .attendance-topbar {
@@ -893,12 +1014,26 @@
   }
 
   .records-panel,
-  .access-panel {
+  .access-panel,
+  .scan-upload-panel {
     padding: 15px 12px 3px;
+  }
+
+  .scan-upload-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .scan-upload-button {
+    justify-self: start;
   }
 
   .records-heading {
     align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .attendance-search {
+    width: 100%;
   }
 
   .attendance-table {
@@ -948,6 +1083,19 @@
     grid-template-columns: 1fr 145px;
   }
 
+  .authorize-form > div {
+    flex-wrap: wrap;
+  }
+
+  .authorize-form input {
+    width: 100%;
+  }
+
+  .authorized-list li > span:nth-child(2) {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
   .attendance-footer {
     flex-direction: column;
   }
@@ -958,5 +1106,14 @@
 
   .gate-card {
     padding: 25px;
+  }
+
+  .gate-actions {
+    flex-direction: column;
+  }
+
+  .gate-actions a,
+  .gate-actions button {
+    width: 100%;
   }
 }

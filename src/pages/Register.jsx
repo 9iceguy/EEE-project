@@ -63,7 +63,7 @@ export default function Register() {
           <div className="text-center">
             <Sectionheader
               title="Your details"
-              level={2}
+              level={3}
               centered
               accent
             />

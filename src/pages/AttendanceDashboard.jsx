@@ -11,6 +11,50 @@ const sampleRecords = [
   { name: "Oluwaseun Ade", staffId: "EEE/STAFF/008", department: "Control & Instrumentation", time: "08:31 AM", status: "Present" },
 ];
 
+function normalizeScanRecords(data) {
+  const records = Array.isArray(data)
+    ? data
+    : data && typeof data === "object"
+      ? data.records ?? data.scans ?? data.attendance
+      : null;
+
+  if (!Array.isArray(records) || records.length === 0) {
+    throw new Error("The JSON file must contain a non-empty array of scan records (or a records, scans, or attendance array).");
+  }
+
+  return records.map((record, index) => {
+    if (!record || typeof record !== "object" || Array.isArray(record)) {
+      throw new Error(`Scan record ${index + 1} must be a JSON object.`);
+    }
+
+    const staffId = record.staffId ?? record.employeeId ?? record.userId ?? record.id;
+    const scanTime = record.timestamp ?? record.scannedAt ?? record.checkInTime ?? record.time;
+    if (typeof staffId !== "string" && typeof staffId !== "number") {
+      throw new Error(`Scan record ${index + 1} needs a staffId, employeeId, userId, or id.`);
+    }
+    if (typeof scanTime !== "string" && typeof scanTime !== "number") {
+      throw new Error(`Scan record ${index + 1} needs a timestamp, scannedAt, checkInTime, or time.`);
+    }
+
+    const timeText = String(scanTime);
+    const parsedTime = new Date(timeText);
+    const time = /[T]\d{2}:\d{2}/.test(timeText) && !Number.isNaN(parsedTime.getTime())
+      ? parsedTime.toLocaleString()
+      : timeText;
+    const status = typeof record.status === "string" && record.status.toLowerCase() === "late"
+      ? "Late"
+      : "Present";
+
+    return {
+      name: String(record.name ?? record.staffName ?? "Staff member"),
+      staffId: String(staffId),
+      department: String(record.department ?? "Unassigned"),
+      time,
+      status,
+    };
+  });
+}
+
 function readSession() {
   try {
     const rawSession = sessionStorage.getItem("eeePortalSession");
@@ -52,6 +96,9 @@ function AttendanceDashboard() {
   const [newEmail, setNewEmail] = useState("");
   const [search, setSearch] = useState("");
   const [showAccessManager, setShowAccessManager] = useState(false);
+  const [uploadedRecords, setUploadedRecords] = useState(null);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadedFilename, setUploadedFilename] = useState("");
 
   const user = sessionState.session;
   const isHod = user?.role === "hod";
@@ -61,12 +108,35 @@ function AttendanceDashboard() {
 
   const filteredRecords = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return sampleRecords;
-    return sampleRecords.filter((record) =>
+    const records = uploadedRecords ?? sampleRecords;
+    if (!query) return records;
+    return records.filter((record) =>
       [record.name, record.staffId, record.department, record.status]
         .some((value) => value.toLowerCase().includes(query)),
     );
-  }, [search]);
+  }, [search, uploadedRecords]);
+
+  const handleScanUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setUploadError("");
+    try {
+      const data = JSON.parse(await file.text());
+      const records = normalizeScanRecords(data);
+      setUploadedRecords(records);
+      setUploadedFilename(file.name);
+      toast.success(`${records.length} fingerprint scan${records.length === 1 ? "" : "s"} loaded.`, { position: "top-center" });
+    } catch (error) {
+      const message = error instanceof SyntaxError
+        ? "This file is not valid JSON. Check the file and try again."
+        : error instanceof Error
+          ? error.message
+          : "Could not read this JSON file.";
+      setUploadError(message);
+    }
+  };
 
   const updatePermissions = (emails) => {
     try {
@@ -210,9 +280,41 @@ function AttendanceDashboard() {
             </div>
           </section>
 
+          <section className="scan-upload-panel" aria-labelledby="scan-upload-title">
+            <div className="scan-upload-copy">
+              <span className="scan-upload-icon" aria-hidden="true">↑</span>
+              <div>
+                <h2 id="scan-upload-title">Upload fingerprint scan data</h2>
+                <p>Import a JSON export to show its attendance records below. Data is processed in this browser only.</p>
+              </div>
+            </div>
+            <label className="scan-upload-button">
+              Choose JSON file
+              <input type="file" accept=".json,application/json" onChange={handleScanUpload} />
+            </label>
+            {uploadedFilename && (
+              <p className="scan-upload-result" role="status">
+                Loaded <strong>{uploadedFilename}</strong> · {uploadedRecords.length} scan records
+              </p>
+            )}
+            {uploadError && <p className="scan-upload-error" role="alert">{uploadError}</p>}
+            <details className="scan-upload-format">
+              <summary>View expected JSON format</summary>
+              <pre>{`[
+  {
+    "staffId": "EEE/STAFF/021",
+    "name": "Adebayo Olumide",
+    "department": "Power Systems",
+    "timestamp": "2026-10-16T08:04:00",
+    "status": "Present"
+  }
+]`}</pre>
+            </details>
+          </section>
+
           <section className="records-panel" id="records">
             <div className="records-heading">
-              <div><h2>Recent attendance</h2><p>Sample check-ins for today · Monday, 12 October</p></div>
+              <div><h2>Recent attendance</h2><p>{uploadedFilename ? `Imported scans from ${uploadedFilename}` : "Sample check-ins for today · Monday, 12 October"}</p></div>
               <label className="attendance-search">
                 <span aria-hidden="true">⌕</span>
                 <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search staff..." aria-label="Search attendance records" />
@@ -222,8 +324,8 @@ function AttendanceDashboard() {
               <table className="attendance-table">
                 <thead><tr><th>Staff member</th><th>Department</th><th>Check-in</th><th>Status</th></tr></thead>
                 <tbody>
-                  {filteredRecords.map((record) => (
-                    <tr key={record.staffId}>
+                  {filteredRecords.map((record, index) => (
+                    <tr key={`${record.staffId}-${record.time}-${index}`}>
                       <td><strong>{record.name}</strong><small>{record.staffId}</small></td>
                       <td>{record.department}</td>
                       <td>{record.time}</td>

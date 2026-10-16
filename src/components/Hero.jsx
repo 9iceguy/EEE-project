@@ -10,7 +10,7 @@ const Hero = () => {
   ];
 
   return (
-    <div className="relative h-125 overflow-hidden">
+    <div className="relative h-[70svh] min-h-[26rem] max-h-[40rem] overflow-hidden">
       <Carousel
         className="absolute inset-0 -z-10"
         showThumbs={false} // Hide thumbnail previews
@@ -23,7 +23,7 @@ const Hero = () => {
         emulateTouch={true} // Enable touch on desktop
       >
         {images.map((src, index) => (
-          <div key={index} className="h-125">
+          <div key={index} className="h-full min-h-[26rem]">
             <img
               className="h-full w-full object-cover"
               src={src}
@@ -42,7 +42,7 @@ const Hero = () => {
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
         <motion.h1
-          className="text-4xl font-bold md:text-6xl"
+          className="text-3xl font-bold sm:text-4xl md:text-6xl"
           initial={{ opacity: 0, x: -40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2, duration: 0.8 }}
@@ -51,7 +51,7 @@ const Hero = () => {
         </motion.h1>
 
         <motion.p
-          className="mt-4 max-w-2xl text-lg md:text-xl"
+          className="mt-4 max-w-2xl text-base sm:text-lg md:text-xl"
           initial={{ opacity: 0, x: 40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4, duration: 0.8 }}
@@ -60,7 +60,7 @@ const Hero = () => {
         </motion.p>
 
         <motion.div
-          className="mt-8 flex flex-wrap items-center justify-center gap-4"
+          className="mt-8 flex w-full flex-wrap items-center justify-center gap-3 sm:gap-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.8 }}

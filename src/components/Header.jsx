@@ -30,22 +30,21 @@ const Header = () => {
   return (
     <div>
       <header
-        className=" text-black
-         m-4 flex justify-between rounded-2xl  py-3 px-6   backdrop-blur-sm"
+        className="m-2 flex flex-col gap-3 rounded-2xl px-3 py-3 text-black backdrop-blur-sm sm:m-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"
       >
         <Link to="/">
-          <div className="flex align-middle logo gap-3">
+          <div className="logo flex items-center gap-3">
             <img
               src="/src/assets/logo1.jpg"
               alt="Logo"
-              width="100"
-              height="100"
-              className="inline-block rounded-full  logo mr-2 "
+              width="80"
+              height="80"
+              className="logo size-12 shrink-0 rounded-full sm:size-16"
             />
-            <div className="flex-col mt-4">
-              <h1 className="text-3xl font-serif">EEE OAU</h1>
-              <h2 className="text-xl font-medium">
-                Bedrock of modern technology...{" "}
+            <div className="min-w-0">
+              <h1 className="text-xl font-serif sm:text-2xl lg:text-3xl">EEE OAU</h1>
+              <h2 className="text-xs font-medium sm:text-sm lg:text-base">
+                Bedrock of modern technology...
               </h2>
             </div>
           </div>

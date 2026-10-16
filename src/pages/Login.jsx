@@ -33,7 +33,9 @@ const Login = () => {
     }
 
     setPassword("");
-    toast.info("Demo access only: authentication is not connected.", { position: "top-center" });
+    toast.info("Demo access only: authentication is not connected.", {
+      position: "top-center",
+    });
     navigate(`/portal/${role}/dashboard`);
   };
 
@@ -48,6 +50,7 @@ const Login = () => {
         }
 
         .login-shell {
+          width: min(100%, 980px);
           max-width: 980px;
           margin: 0 auto;
           padding: 18px 18px 32px;
@@ -364,20 +367,72 @@ const Login = () => {
             padding-left: 12px;
             padding-right: 12px;
           }
+
+          .visual-frame {
+            max-width: 480px;
+            aspect-ratio: 1.6;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .login-shell {
+            padding: 12px 10px 24px;
+          }
+
+          .login-topbar {
+            align-items: flex-start;
+            gap: 12px;
+          }
+
+          .login-links {
+            flex-shrink: 0;
+          }
+
+          .welcome-panel {
+            padding: 16px 14px;
+          }
+
+          .hero-actions,
+          .login-actions {
+            flex-direction: column;
+          }
+
+          .hero-actions .button,
+          .login-actions .button {
+            width: 100%;
+          }
+
+          .login-card {
+            padding: 20px 14px 16px;
+          }
+
+          .login-helper,
+          .checkbox-row {
+            align-items: flex-start;
+            flex-wrap: wrap;
+          }
+
+          .visual-badge {
+            min-width: 0;
+            width: 100%;
+            text-align: center;
+          }
         }
       `}</style>
 
       <div className="login-page">
         <div className="login-shell">
           <header className="login-topbar">
-            <Sectionheader className="login-brand" aria-label="Brand logo " title="Login"/>
-              
+            <Sectionheader
+              className="login-brand"
+              aria-label="Brand logo "
+              title="Login"
+            />
 
             <nav className="login-links" aria-label="Main navigation">
-            
-              <a href="#" className="link-pill">
+              <Link to="/register" className="link-pill">
                 Sign up
-              </a>
+              </Link>
             </nav>
           </header>
 
@@ -421,7 +476,11 @@ const Login = () => {
               <button type="button" className="button secondary">
                 Create account
               </button>
-              <button type="submit" className="button primary" form="login-form-main">
+              <button
+                type="submit"
+                className="button primary"
+                form="login-form-main"
+              >
                 Log in
               </button>
             </div>
@@ -433,7 +492,11 @@ const Login = () => {
                 <h2>Sign in</h2>
                 <p>Use your email address and password to sign in.</p>
 
-                <form id="login-form-main" onSubmit={loginForm} className="login-form">
+                <form
+                  id="login-form-main"
+                  onSubmit={loginForm}
+                  className="login-form"
+                >
                   <label htmlFor="signin-email">
                     Email address
                     <input
@@ -505,7 +568,6 @@ const Login = () => {
 
               <div className="visual">
                 <div className="visual-frame" aria-label="Student learning" />
-            
               </div>
             </div>
           </section>
