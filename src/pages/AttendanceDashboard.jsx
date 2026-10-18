@@ -1,9 +1,13 @@
-import { useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import { useAuth } from "../auth/useAuth";
+import {
+  getCurrentAcademicSession,
+  getMyAttendance,
+  listAttendanceSessions,
+} from "../api";
 import "./AttendanceDashboard.css";
 
-const permissionKey = "eeeAttendanceApprovedStaff";
 const sampleRecords = [
   { name: "Adebayo Olumide", staffId: "EEE/STAFF/021", department: "Power Systems", time: "08:04 AM", status: "Present" },
   { name: "Akinola Tobi", staffId: "EEE/STAFF/014", department: "Electronics", time: "08:12 AM", status: "Present" },
@@ -11,72 +15,39 @@ const sampleRecords = [
   { name: "Oluwaseun Ade", staffId: "EEE/STAFF/008", department: "Control & Instrumentation", time: "08:31 AM", status: "Present" },
 ];
 
-function normalizeScanRecords(data) {
-  const records = Array.isArray(data)
-    ? data
-    : data && typeof data === "object"
-      ? data.records ?? data.scans ?? data.attendance
-      : null;
-
-  if (!Array.isArray(records) || records.length === 0) {
-    throw new Error("The JSON file must contain a non-empty array of scan records (or a records, scans, or attendance array).");
+function formatTime(value) {
+  if (!value) return "Not recorded";
+  const date = new Date(value);
+  if (!Number.isNaN(date.getTime())) {
+    return date.toLocaleString([], {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
+  return String(value);
+}
 
-  return records.map((record, index) => {
-    if (!record || typeof record !== "object" || Array.isArray(record)) {
-      throw new Error(`Scan record ${index + 1} must be a JSON object.`);
-    }
+function normalizeAttendanceRows(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return [];
 
-    const staffId = record.staffId ?? record.employeeId ?? record.userId ?? record.id;
-    const scanTime = record.timestamp ?? record.scannedAt ?? record.checkInTime ?? record.time;
-    if (typeof staffId !== "string" && typeof staffId !== "number") {
-      throw new Error(`Scan record ${index + 1} needs a staffId, employeeId, userId, or id.`);
-    }
-    if (typeof scanTime !== "string" && typeof scanTime !== "number") {
-      throw new Error(`Scan record ${index + 1} needs a timestamp, scannedAt, checkInTime, or time.`);
-    }
-
-    const timeText = String(scanTime);
-    const parsedTime = new Date(timeText);
-    const time = /[T]\d{2}:\d{2}/.test(timeText) && !Number.isNaN(parsedTime.getTime())
-      ? parsedTime.toLocaleString()
-      : timeText;
-    const status = typeof record.status === "string" && record.status.toLowerCase() === "late"
-      ? "Late"
-      : "Present";
+  return rows.map((row, index) => {
+    const status = String(row?.status ?? row?.record_status ?? "present");
+    const name = row?.name ?? row?.student_name ?? row?.student ?? `Student ${index + 1}`;
+    const idValue = row?.student_id ?? row?.studentId ?? row?.id ?? `${index + 1}`;
+    const department = row?.department ?? row?.session__offering_id ?? "Unassigned";
+    const time = formatTime(row?.recorded_at ?? row?.recordedAt ?? row?.time ?? row?.check_in ?? row?.created_at);
 
     return {
-      name: String(record.name ?? record.staffName ?? "Staff member"),
-      staffId: String(staffId),
-      department: String(record.department ?? "Unassigned"),
+      name: typeof name === "string" ? name : String(name),
+      staffId: String(idValue),
+      department: typeof department === "string" ? department : String(department),
       time,
-      status,
+      status: status.charAt(0).toUpperCase() + status.slice(1),
     };
   });
-}
-
-function readSession() {
-  try {
-    const rawSession = sessionStorage.getItem("eeePortalSession");
-    if (!rawSession) return { session: null, error: "" };
-    const session = JSON.parse(rawSession);
-    if (!session || typeof session.email !== "string" || typeof session.role !== "string") {
-      throw new Error("Invalid session data");
-    }
-    return { session, error: "" };
-  } catch {
-    return { session: null, error: "Your demo session could not be read. Please sign in again." };
-  }
-}
-
-function readApprovedStaff() {
-  const stored = localStorage.getItem(permissionKey);
-  if (!stored) return [];
-  const emails = JSON.parse(stored);
-  if (!Array.isArray(emails) || emails.some((email) => typeof email !== "string")) {
-    throw new Error("Invalid staff permission data");
-  }
-  return emails;
 }
 
 function Icon({ children }) {
@@ -85,107 +56,85 @@ function Icon({ children }) {
 
 function AttendanceDashboard() {
   const navigate = useNavigate();
-  const [sessionState] = useState(readSession);
-  const [permissionState, setPermissionState] = useState(() => {
-    try {
-      return { emails: readApprovedStaff(), error: "" };
-    } catch {
-      return { emails: [], error: "HOD staff permissions could not be read from this browser." };
-    }
-  });
-  const [newEmail, setNewEmail] = useState("");
+  const { user, status } = useAuth();
+  const [sessionInfo, setSessionInfo] = useState(null);
+  const [attendanceSessions, setAttendanceSessions] = useState([]);
+  const [attendanceRecords, setAttendanceRecords] = useState(sampleRecords);
   const [search, setSearch] = useState("");
-  const [showAccessManager, setShowAccessManager] = useState(false);
-  const [uploadedRecords, setUploadedRecords] = useState(null);
-  const [uploadError, setUploadError] = useState("");
-  const [uploadedFilename, setUploadedFilename] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const user = sessionState.session;
-  const isHod = user?.role === "hod";
-  const isAuthorizedStaff =
-    user?.role === "staff" && permissionState.emails.includes(user.email.toLowerCase());
-  const canViewDashboard = isHod || isAuthorizedStaff;
+  useEffect(() => {
+    if (!user || status !== "ready") {
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadData = async () => {
+      setLoading(true);
+      setLoadError("");
+      try {
+        if (user.role === "hod") {
+          const current = await getCurrentAcademicSession().catch(() => null);
+          if (isMounted) {
+            setSessionInfo(current ?? { name: "No active session selected", academic_session: null, source: "database" });
+          }
+        }
+
+        const sessionsResponse = await listAttendanceSessions(1).catch(() => ({ results: [] }));
+        const sessions = Array.isArray(sessionsResponse)
+          ? sessionsResponse
+          : sessionsResponse?.results ?? [];
+
+        if (isMounted) {
+          setAttendanceSessions(sessions);
+        }
+
+        const response = await getMyAttendance(1).catch(() => ({ results: [] }));
+        const rows = Array.isArray(response)
+          ? response
+          : response?.results ?? [];
+        const normalized = normalizeAttendanceRows(rows);
+
+        if (isMounted) {
+          setAttendanceRecords(normalized.length > 0 ? normalized : sampleRecords);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setLoadError(error.message || "Attendance data could not be loaded from the API.");
+          setAttendanceRecords(sampleRecords);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [status, user]);
 
   const filteredRecords = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const records = uploadedRecords ?? sampleRecords;
-    if (!query) return records;
-    return records.filter((record) =>
+    if (!query) return attendanceRecords;
+    return attendanceRecords.filter((record) =>
       [record.name, record.staffId, record.department, record.status]
-        .some((value) => value.toLowerCase().includes(query)),
+        .some((value) => String(value).toLowerCase().includes(query)),
     );
-  }, [search, uploadedRecords]);
+  }, [attendanceRecords, search]);
 
-  const handleScanUpload = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    setUploadError("");
-    try {
-      const data = JSON.parse(await file.text());
-      const records = normalizeScanRecords(data);
-      setUploadedRecords(records);
-      setUploadedFilename(file.name);
-      toast.success(`${records.length} fingerprint scan${records.length === 1 ? "" : "s"} loaded.`, { position: "top-center" });
-    } catch (error) {
-      const message = error instanceof SyntaxError
-        ? "This file is not valid JSON. Check the file and try again."
-        : error instanceof Error
-          ? error.message
-          : "Could not read this JSON file.";
-      setUploadError(message);
-    }
-  };
-
-  const updatePermissions = (emails) => {
-    try {
-      localStorage.setItem(permissionKey, JSON.stringify(emails));
-      setPermissionState({ emails, error: "" });
-      return true;
-    } catch {
-      setPermissionState((current) => ({
-        ...current,
-        error: "Could not save staff permissions in this browser. Check browser storage settings.",
-      }));
-      return false;
-    }
-  };
-
-  const handleAuthorize = (event) => {
-    event.preventDefault();
-    const email = newEmail.trim().toLowerCase();
-    if (!email) return;
-    if (permissionState.emails.includes(email)) {
-      toast.info("This staff member is already authorized.", { position: "top-center" });
-      return;
-    }
-    if (updatePermissions([...permissionState.emails, email])) {
-      setNewEmail("");
-      toast.success("Staff attendance access authorized.", { position: "top-center" });
-    }
-  };
-
-  const handleRevoke = (email) => {
-    if (updatePermissions(permissionState.emails.filter((approvedEmail) => approvedEmail !== email))) {
-      toast.success("Attendance access revoked.", { position: "top-center" });
-    }
-  };
-
-  const handleSignOut = () => {
-    sessionStorage.removeItem("eeePortalSession");
-    navigate("/login");
-  };
-
-  if (sessionState.error) {
-    return <AccessMessage title="Session unavailable" message={sessionState.error} />;
-  }
+  const canViewDashboard = !!user && ["hod", "staff"].includes(user.role);
 
   if (!user) {
     return (
       <AccessMessage
         title="Sign in to continue"
-        message="The attendance dashboard is available only to HODs and staff approved by the Head of Department."
+        message="The attendance dashboard is available only to staff and HOD accounts with active session authentication."
       />
     );
   }
@@ -194,8 +143,7 @@ function AttendanceDashboard() {
     return (
       <AccessMessage
         title="Attendance access not approved"
-        message="Your account does not have attendance permission yet. Ask your Head of Department to authorize your staff email."
-        email={user.email}
+        message="This account is not authorized for the department attendance workspace. Sign in with a staff or HOD role to continue."
       />
     );
   }
@@ -211,157 +159,102 @@ function AttendanceDashboard() {
         <p className="attendance-nav-label">WORKSPACE</p>
         <nav className="attendance-nav" aria-label="Attendance navigation">
           <a href="#overview" className="active"><Icon>▦</Icon>Overview</a>
-          <a href="#records"><Icon>▤</Icon>Attendance records</a>
-          {isHod && (
-            <button type="button" onClick={() => setShowAccessManager((open) => !open)}>
-              <Icon>♙</Icon>Staff permissions
-            </button>
-          )}
+          <a href="#sessions"><Icon>▤</Icon>Sessions</a>
+          <a href="#records"><Icon>◫</Icon>Attendance records</a>
         </nav>
 
-        <div className="attendance-sidebar-bottom">
-          <div className="sidebar-device">
-            <span className="device-indicator" />
-            <span><strong>ESP32 scanner</strong><small>Not connected</small></span>
-          </div>
-          <button className="sidebar-signout" type="button" onClick={handleSignOut}>
-            <Icon>↪</Icon>Sign out
-          </button>
+        <div className="attendance-userbox">
+          <span className="attendance-user-label">SIGNED IN</span>
+          <strong>{user.username || user.email || "Authenticated user"}</strong>
+          <small>{user.role === "hod" ? "Head of Department" : "Staff member"}</small>
         </div>
+
+        <button type="button" className="attendance-signout" onClick={() => navigate("/login")}>Return to login</button>
       </aside>
 
-      <section className="attendance-main">
-        <header className="attendance-topbar">
-          <div className="breadcrumb">Workspace <span>/</span> Attendance</div>
-          <div className="attendance-user">
-            <span className="user-avatar">{isHod ? "H" : user.email.charAt(0).toUpperCase()}</span>
-            <span><strong>{isHod ? "Head of Department" : "Authorized staff"}</strong><small>{user.email}</small></span>
+      <section className="attendance-main" id="overview">
+        <div className="attendance-topbar">
+          <div>
+            <p className="attendance-eyebrow">EEE OAU · STAFF ATTENDANCE</p>
+            <h1>Department attendance dashboard</h1>
           </div>
-        </header>
-
-        <div className="attendance-content" id="overview">
-          <div className="attendance-heading">
-            <div>
-              <p className="attendance-eyebrow">ELECTRICAL & ELECTRONIC ENGINEERING</p>
-              <h1>Attendance dashboard</h1>
-              <p className="heading-description">Monitor staff check-ins recorded by the department fingerprint scanner.</p>
-            </div>
-            <button className="outline-action" type="button" onClick={() => toast.info("ESP32 connection is not configured yet.", { position: "top-center" })}>
-              <Icon>⟳</Icon>Check device
-            </button>
-          </div>
-
-          <div className="demo-notice" role="status">
-            <Icon>ⓘ</Icon>
-            <span><strong>Demo dashboard.</strong> Attendance below is sample data; live ESP32 synchronization is not connected.</span>
-          </div>
-
-          <section className="attendance-stats" aria-label="Attendance summary">
-            <StatCard icon="♙" label="Staff on register" value="48" detail="Department staff" tone="blue" />
-            <StatCard icon="✓" label="Checked in today" value="36" detail="75% of registered staff" tone="green" />
-            <StatCard icon="◷" label="Late arrivals" value="04" detail="After 8:15 AM" tone="orange" />
-            <StatCard icon="⌁" label="Scanner status" value="Offline" detail="Waiting for ESP32" tone="slate" />
-          </section>
-
-          <section className="scanner-panel">
-            <div className="scanner-copy">
-              <div className="scanner-title"><span className="scanner-wave">⌁</span><span><strong>Fingerprint scanner</strong><small>ESP32 · Department entrance</small></span></div>
-              <p>Attendance is recorded when an enrolled staff member verifies their fingerprint on the connected scanner.</p>
-              <div className="scanner-status"><span className="device-indicator" />Device disconnected</div>
-            </div>
-            <div className="fingerprint-art" aria-hidden="true">
-              <span>◎</span><small>PLACE FINGER TO SCAN</small>
-            </div>
-            <div className="scanner-action">
-              <span>Last sync <strong>Not available</strong></span>
-              <button type="button" onClick={() => toast.info("Connect the ESP32 service to start a live fingerprint scan.", { position: "top-center" })}>
-                Start verification
-              </button>
-            </div>
-          </section>
-
-          <section className="scan-upload-panel" aria-labelledby="scan-upload-title">
-            <div className="scan-upload-copy">
-              <span className="scan-upload-icon" aria-hidden="true">↑</span>
-              <div>
-                <h2 id="scan-upload-title">Upload fingerprint scan data</h2>
-                <p>Import a JSON export to show its attendance records below. Data is processed in this browser only.</p>
-              </div>
-            </div>
-            <label className="scan-upload-button">
-              Choose JSON file
-              <input type="file" accept=".json,application/json" onChange={handleScanUpload} />
-            </label>
-            {uploadedFilename && (
-              <p className="scan-upload-result" role="status">
-                Loaded <strong>{uploadedFilename}</strong> · {uploadedRecords.length} scan records
-              </p>
-            )}
-            {uploadError && <p className="scan-upload-error" role="alert">{uploadError}</p>}
-            <details className="scan-upload-format">
-              <summary>View expected JSON format</summary>
-              <pre>{`[
-  {
-    "staffId": "EEE/STAFF/021",
-    "name": "Adebayo Olumide",
-    "department": "Power Systems",
-    "timestamp": "2026-10-16T08:04:00",
-    "status": "Present"
-  }
-]`}</pre>
-            </details>
-          </section>
-
-          <section className="records-panel" id="records">
-            <div className="records-heading">
-              <div><h2>Recent attendance</h2><p>{uploadedFilename ? `Imported scans from ${uploadedFilename}` : "Sample check-ins for today · Monday, 12 October"}</p></div>
-              <label className="attendance-search">
-                <span aria-hidden="true">⌕</span>
-                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search staff..." aria-label="Search attendance records" />
-              </label>
-            </div>
-            <div className="attendance-table-wrap">
-              <table className="attendance-table">
-                <thead><tr><th>Staff member</th><th>Department</th><th>Check-in</th><th>Status</th></tr></thead>
-                <tbody>
-                  {filteredRecords.map((record, index) => (
-                    <tr key={`${record.staffId}-${record.time}-${index}`}>
-                      <td><strong>{record.name}</strong><small>{record.staffId}</small></td>
-                      <td>{record.department}</td>
-                      <td>{record.time}</td>
-                      <td><span className={`record-status ${record.status.toLowerCase()}`}>{record.status}</span></td>
-                    </tr>
-                  ))}
-                  {filteredRecords.length === 0 && <tr><td className="empty-records" colSpan="4">No sample records match your search.</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          {isHod && showAccessManager && (
-            <section className="access-panel" id="staff-access">
-              <div className="records-heading">
-                <div><h2>Staff attendance permissions</h2><p>Only emails approved here can open the staff attendance dashboard.</p></div>
-                <span className="permission-count">{permissionState.emails.length} authorized</span>
-              </div>
-              {permissionState.error && <p className="permission-error" role="alert">{permissionState.error}</p>}
-              <form className="authorize-form" onSubmit={handleAuthorize}>
-                <label htmlFor="authorize-email">Staff email address</label>
-                <div><input id="authorize-email" type="email" required value={newEmail} onChange={(event) => setNewEmail(event.target.value)} placeholder="staff@oauife.edu.ng" /><button type="submit">Authorize staff</button></div>
-              </form>
-              {permissionState.emails.length ? (
-                <ul className="authorized-list">
-                  {permissionState.emails.map((email) => (
-                    <li key={email}><span className="user-avatar">{email.charAt(0).toUpperCase()}</span><span>{email}</span><button type="button" onClick={() => handleRevoke(email)}>Revoke</button></li>
-                  ))}
-                </ul>
-              ) : <p className="no-authorized-staff">No staff have been authorized yet. Add a staff email above to grant attendance access.</p>}
-              <p className="permission-footnote">Demo only: permissions are saved in this browser and are not a secure server-side access control.</p>
-            </section>
-          )}
-
-          <footer className="attendance-footer">EEE OAU · Staff attendance <span>Secure access managed by the Head of Department</span></footer>
+          <span className="attendance-status-chip">{loading ? "Syncing" : "Connected"}</span>
         </div>
+
+        <section className="attendance-stat-grid">
+          <StatCard icon="◔" label="Current academic session" value={sessionInfo?.name || "Not selected"} detail={sessionInfo?.source ? `Source: ${sessionInfo.source}` : "Awaiting selection"} tone="blue" />
+          <StatCard icon="✓" label="Open sessions" value={String(attendanceSessions.length)} detail="Visible class records" tone="green" />
+          <StatCard icon="⌁" label="Recorded attendance" value={String(attendanceRecords.length)} detail="Recent entries" tone="orange" />
+          <StatCard icon="△" label="API status" value={loadError ? "Warning" : "Live"} detail={loadError || "Session-authenticated API ready"} tone="slate" />
+        </section>
+
+        <section className="session-panel" id="sessions">
+          <div className="records-heading">
+            <div>
+              <h2>Current session and attendance classes</h2>
+              <p>{sessionInfo?.name ? `Academic session: ${sessionInfo.name}` : "No current session has been selected yet."}</p>
+            </div>
+          </div>
+
+          <div className="attendance-session-list">
+            {attendanceSessions.length === 0 ? (
+              <p className="empty-records">No attendance sessions are visible yet. The backend will populate this list after a class is opened.</p>
+            ) : (
+              attendanceSessions.map((session, index) => (
+                <article key={session.id ?? session.session_id ?? `attendance-session-${index}`} className="attendance-session-item">
+                  <div>
+                    <strong>{session.title || session.name || "Attendance class"}</strong>
+                    <small>
+                      {session.offering ? `Offering ${session.offering}` : "Current offering"} · {session.status || "Open"}
+                    </small>
+                  </div>
+                  <span>
+                    {session.starts_at ? formatTime(session.starts_at) : "Pending start"}
+                  </span>
+                </article>
+              ))
+            )}
+          </div>
+        </section>
+
+        {loadError && <p className="scan-upload-error" role="alert">{loadError}</p>}
+
+        <section className="records-panel" id="records">
+          <div className="records-heading">
+            <div>
+              <h2>Recent attendance</h2>
+              <p>{attendanceSessions.length ? "Latest visible records from the configured attendance API." : "Using sample data until a live attendance class is available."}</p>
+            </div>
+            <label className="attendance-search">
+              <span aria-hidden="true">⌕</span>
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search staff..."
+                aria-label="Search attendance records"
+              />
+            </label>
+          </div>
+
+          <div className="attendance-table-wrap">
+            <table className="attendance-table">
+              <thead><tr><th>Staff member</th><th>Department</th><th>Check-in</th><th>Status</th></tr></thead>
+              <tbody>
+                {filteredRecords.map((record, index) => (
+                  <tr key={`${record.staffId}-${record.time}-${index}`}>
+                    <td><strong>{record.name}</strong><small>{record.staffId}</small></td>
+                    <td>{record.department}</td>
+                    <td>{record.time}</td>
+                    <td><span className={`record-status ${record.status.toLowerCase()}`}>{record.status}</span></td>
+                  </tr>
+                ))}
+                {filteredRecords.length === 0 && <tr><td className="empty-records" colSpan="4">No records match your search.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <footer className="attendance-footer">EEE OAU · Attendance API integration <span>Session-authenticated backend requests use CSRF-protected Django endpoints.</span></footer>
       </section>
     </main>
   );
@@ -376,7 +269,7 @@ function StatCard({ icon, label, value, detail, tone }) {
   );
 }
 
-function AccessMessage({ title, message, email }) {
+function AccessMessage({ title, message }) {
   const navigate = useNavigate();
   return (
     <main className="attendance-gate">
@@ -385,12 +278,11 @@ function AccessMessage({ title, message, email }) {
         <p className="attendance-eyebrow">EEE OAU · STAFF ATTENDANCE</p>
         <h1>{title}</h1>
         <p>{message}</p>
-        {email && <div className="gate-email">{email}</div>}
         <div className="gate-actions">
           <Link to="/login" className="gate-primary">Sign in</Link>
           <button type="button" onClick={() => navigate("/")}>Back to home</button>
         </div>
-        <small>HODs can sign in and authorize staff from the attendance dashboard.</small>
+        <small>Use a signed-in staff or HOD account to access the session-aware attendance API.</small>
       </div>
     </main>
   );

@@ -45,11 +45,12 @@ function requestErrorMessage(details, status) {
 
 export async function apiRequest(
   path,
-  { method = "GET", query = {}, body, signal, responseType = "json" } = {},
+  { method = "GET", query = {}, body, signal, responseType = "json", headers: extraHeaders = {} } = {},
 ) {
   const verb = method.toUpperCase();
   const headers = {
     Accept: responseType === "blob" ? "text/csv" : "application/json",
+    ...extraHeaders,
   };
   const isWrite = !["GET", "HEAD", "OPTIONS"].includes(verb);
 
@@ -336,6 +337,17 @@ export function listAcademicSessions(page = 1, signal) {
   return apiGet("/api/academic-sessions/", { page }, signal);
 }
 
+export function getCurrentAcademicSession(signal) {
+  return apiGet("/api/academic-sessions/current/", {}, signal);
+}
+
+export function selectCurrentAcademicSession(academicSessionId, expectedSessionId = null) {
+  return apiPut("/api/academic-sessions/current/", {
+    academic_session: academicSessionId,
+    expected_session_id: expectedSessionId,
+  });
+}
+
 export function createAcademicSession(name) {
   return apiPost("/api/academic-sessions/", { name });
 }
@@ -463,4 +475,77 @@ export function queueResultShare(batchId, expectedDigest) {
 
 export function retryFailedResultShares(batchId) {
   return apiPost(`/api/result-shares/${pathId(batchId)}/retry/`);
+}
+
+export function getAttendanceRoster(offeringId, page = 1, signal) {
+  return apiGet(`/api/attendance/offerings/${pathId(offeringId)}/roster/`, { page }, signal);
+}
+
+export function confirmAttendanceRoster(offeringId, studentIds, expectedRevision) {
+  return apiPut(`/api/attendance/offerings/${pathId(offeringId)}/roster/`, {
+    student_ids: studentIds,
+    expected_revision: expectedRevision,
+  });
+}
+
+export function setAttendanceStaff(offeringId, staffId, isActive) {
+  return apiPut(`/api/attendance/offerings/${pathId(offeringId)}/staff/`, {
+    staff: staffId,
+    is_active: isActive,
+  });
+}
+
+export function listAttendanceSessions(page = 1, signal) {
+  return apiGet("/api/attendance/sessions/", { page }, signal);
+}
+
+export function openAttendanceSession(session) {
+  return apiPost("/api/attendance/sessions/", session);
+}
+
+export function getAttendanceSession(sessionId, signal) {
+  return apiGet(`/api/attendance/sessions/${pathId(sessionId)}/`, {}, signal);
+}
+
+export function closeAttendanceSession(sessionId) {
+  return apiPost(`/api/attendance/sessions/${pathId(sessionId)}/close/`);
+}
+
+export function listAttendanceRecords(sessionId, page = 1, signal) {
+  return apiGet(`/api/attendance/sessions/${pathId(sessionId)}/records/`, { page }, signal);
+}
+
+export function recordManualAttendance(sessionId, event) {
+  return apiPost(`/api/attendance/sessions/${pathId(sessionId)}/records/`, event);
+}
+
+export function correctAttendanceRecord(recordId, status, reason) {
+  return apiPost(`/api/attendance/records/${pathId(recordId)}/correct/`, {
+    status,
+    reason,
+  });
+}
+
+export function getMyAttendance(page = 1, signal) {
+  return apiGet("/api/me/attendance/", { page }, signal);
+}
+
+export function previewPendingCaptures(sessionId, fileBody, captureHash) {
+  return apiRequest(`/api/attendance/sessions/${pathId(sessionId)}/pending-batches/preview/`, {
+    method: "POST",
+    body: fileBody,
+    headers: { "Content-Type": "application/x-ndjson", "X-Capture-SHA256": captureHash },
+  });
+}
+
+export function importPendingCaptures(sessionId, fileBody, captureHash) {
+  return apiRequest(`/api/attendance/sessions/${pathId(sessionId)}/pending-batches/`, {
+    method: "POST",
+    body: fileBody,
+    headers: { "Content-Type": "application/x-ndjson", "X-Capture-SHA256": captureHash },
+  });
+}
+
+export function listPendingCaptureBatches(sessionId, page = 1, signal) {
+  return apiGet(`/api/attendance/sessions/${pathId(sessionId)}/pending-batches/`, { page }, signal);
 }

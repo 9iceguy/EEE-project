@@ -1,7 +1,7 @@
 # Frontend-to-backend API reference
 
 **Project:** OAU EEE Student Records & Identification System  
-**Checked against the active workspace:** 14 October 2026  
+**Checked against the active workspace:** 18 October 2026  
 **Frontend direction:** React  
 **Backend:** Django and Django REST Framework, using session authentication
 
@@ -13,10 +13,10 @@ prototype contain additional workflows that are not active backend APIs.
 
 **Implemented** means that an operation exists in the active backend. It does
 not mean that its React screen, shared PostgreSQL integration or production
-deployment has been completed. The React app now has a shared API client for
-documented implemented routes and uses it for session authentication and
-password-reset requests. Most portal workflows remain prototypes and are not
-connected to these APIs.
+deployment has been completed. All JavaScript and JSX below are commented
+integration examples. A separate live guardian-email React page now exists in
+[frontend/guardian-results](frontend/guardian-results/README.md), linked from the
+disposable demo. Other prototype workflows remain synthetic until integrated.
 
 ## Contents
 
@@ -28,6 +28,7 @@ connected to these APIs.
 6. [Implemented student and guardian methods](#6-implemented-student-and-guardian-methods)
 7. [Implemented messaging methods](#7-implemented-messaging-methods)
 8. [Implemented academic methods](#8-implemented-academic-methods)
+   - [Current academic session and attendance](#86-current-academic-session-and-attendance)
 9. [Implemented guardian result-sharing methods](#9-implemented-guardian-result-sharing-methods)
 10. [Calling methods from React screens](#10-calling-methods-from-react-screens)
 11. [Methods and integration work not completed yet](#11-methods-and-integration-work-not-completed-yet)
@@ -147,16 +148,17 @@ for HTTP errors, so the client must check `response.ok`. See [MDN's Fetch respon
 
 ### 3.1 Same-origin React setup
 
-Use relative `/api/...` URLs. Vite proxies `/api` to Django at
-`http://127.0.0.1:8000` by default; set `VITE_API_PROXY_TARGET` when the backend
-uses a different address. The browser sees one origin for the React page and
-its API requests. Production should likewise route `/api` to Django under the
-frontend's HTTPS origin.
+Use relative `/api/...` URLs. Configure the chosen React development server to
+proxy `/api` to Django, commonly `http://127.0.0.1:8000`. The browser should see
+one origin for the React page and its API requests. Production should likewise
+route `/api` to Django under the frontend's HTTPS origin.
 
-No permissive CORS middleware or bearer/JWT authentication is configured.
-Calling Django directly from a different browser origin requires a separately
-completed deployment/authentication configuration; `credentials: "include"`
-by itself does not solve CORS or cookie policy.
+The repository has standalone frontend prototypes, not a configured React
+development server. Proxy installation is still integration work. No permissive
+CORS middleware or bearer/JWT authentication is currently configured. Calling
+Django directly from a different browser origin requires a separately completed
+deployment/authentication configuration; `credentials: "include"` by itself
+does not solve CORS or cookie policy.
 
 Backend origin/host settings come from `DJANGO_ALLOWED_HOSTS` and
 `DJANGO_CSRF_TRUSTED_ORIGINS`. Configure them for the actual proxy arrangement.
@@ -189,7 +191,7 @@ again after a page reload. For AJAX writes Django expects the token in the
 | Public + CSRF | No signed-in account needed; a write still needs the CSRF token/cookie. |
 | Signed in | An authenticated account. Own-student routes additionally need a linked student profile. |
 | HOD | An authenticated, active user with both `is_staff=true` and `is_superuser=true`. A group or display label alone is insufficient. |
-| Student reader | Staff with `students.view_student`; ordinary staff must have an active adviser assignment for `CURRENT_ACADEMIC_SESSION` and the student's current level. HOD has department scope. |
+| Student reader | Staff with `students.view_student`; ordinary staff must have an active adviser assignment for the resolved current academic session and the student's current level. HOD has department scope. |
 | Student creator | Staff with `students.add_student`; ordinary staff must have an active assignment for the new record's level in the current configured session. |
 | Student editor | Staff with `students.change_student` and visibility of the record; ordinary staff cannot change level or academic status. |
 | Guardian reader/writer | Student reader plus `students.view_guardian`; POST adds `students.add_guardian`, PATCH adds `students.change_guardian`. |
@@ -205,16 +207,19 @@ also need reader visibility. An empty current-session setting gives ordinary
 staff no adviser-scoped reads and prevents scoped writes/messaging.
 
 Login and `auth/me/` return `role`, `permissions`, `groups` and `adviser_levels`
-as UI hints. They do not expose assignment IDs. A lecturer's course assignment
-is not currently an alternative backend scope; that prototype workflow remains
-unfinished. The backend checks authorization on every request.
+as UI hints. They do not expose adviser assignment IDs. Explicit course-staff
+assignments now authorize attendance only, with independent attendance permissions;
+they do not expand profile/result permissions or implement lecturer score batches.
+The current session resolves from the database selection, with
+CURRENT_ACADEMIC_SESSION as bootstrap fallback. The backend checks authorization
+on every request.
 
 ## 4. Shared commented React API client
 
-The shared `frontend/src/api.js` module implements the transport and named
-methods for the active endpoint catalog in sections 5–9. It uses browser APIs
-and has no React-specific dependency, so screens can share it. Unsupported
-prototype workflows are intentionally not represented as working API calls.
+The blocks in sections 4–9 can be assembled, in order, into a future
+`frontend/src/api.js`. They use browser APIs and contain no React-specific
+dependency, so components can share them. This is a suggested module location;
+the file is not created by this documentation change.
 
 ```javascript
 // Keep the CSRF token only in this browser tab's module memory.
@@ -1052,6 +1057,121 @@ Graduated histories are protected against result and requirement edits until
 the HOD reopens status to `undergraduate`. A graduation review stores the latest
 approval; it is not an immutable audit history.
 
+### 8.6 Current academic session and attendance
+
+These are mounted APIs, independent of the unfinished identity-check proposal.
+All browser writes require session authentication and CSRF. Attendance responses
+use no-store caching. See [attendance API](docs/attendance-api.md) and
+[pending capture batches](docs/attendance-pending-batches.md) for full details.
+
+#### Current academic session
+
+| Client method | HTTP route | Access / payload | Response |
+| --- | --- | --- | --- |
+| `getCurrentAcademicSession` | `GET /api/academic-sessions/current/` | HOD | 200 `{academic_session, name, source}`; ID can be null before selection; source is `database` or `environment`. |
+| `selectCurrentAcademicSession` | `PUT /api/academic-sessions/current/` | HOD; `academic_session` catalog integer ID, `expected_session_id` previously returned ID or null | 200 updated selection; stale selection returns 400. |
+
+The database selection overrides the environment fallback for adviser scope,
+messaging and academic permissions. Selection history records the actor. It does
+not promote students, copy assignments, change results or open attendance classes.
+
+#### Attendance route catalog
+
+`{session_id}` is an attendance-class UUID, distinct from the academic-session
+integer ID. `{record_id}` is an integer. Ordinary staff require an active explicit
+assignment to the offering in the current academic session and
+`attendance.view_attendance`. Actions additionally require the permission shown;
+an adviser-level assignment alone does not grant course access. HOD has department
+visibility, including historical classes; new classes must use current offerings.
+
+| Client method | HTTP route | Access / request | Response |
+| --- | --- | --- | --- |
+| `getAttendanceRoster` | `GET /api/attendance/offerings/{offering_id}/roster/` | HOD; `page` | 200 paginated candidates plus `confirmed_revision`, `confirmed_student_ids`. |
+| `confirmAttendanceRoster` | `PUT /api/attendance/offerings/{offering_id}/roster/` | HOD; `student_ids` (1–1000 unique UUIDs), `expected_revision` (0 initially) | 200 `{revision, student_ids}`. |
+| `setAttendanceStaff` | `PUT /api/attendance/offerings/{offering_id}/staff/` | HOD; `staff` account integer ID, `is_active` boolean | 200 `{id, staff, is_active}`; this is not a staff-directory/list API. |
+| `listAttendanceSessions` | `GET /api/attendance/sessions/` | HOD or scoped attendance reader; `page` | 200 paginated visible classes. |
+| `openAttendanceSession` | `POST /api/attendance/sessions/` | HOD or scoped staff + `attendance.manage_attendance`; `offering`, `title`, `starts_at`, `ends_at` | 201 class. |
+| `getAttendanceSession` | `GET /api/attendance/sessions/{session_id}/` | HOD or scoped attendance reader | 200 class plus frozen `student_ids`. |
+| `closeAttendanceSession` | `POST /api/attendance/sessions/{session_id}/close/` | HOD or scoped staff + `attendance.manage_attendance`; empty object | 200 closed class; idempotent. |
+| `listAttendanceRecords` | `GET /api/attendance/sessions/{session_id}/records/` | HOD or scoped attendance reader; `page` | 200 paginated records. |
+| `recordManualAttendance` | `POST /api/attendance/sessions/{session_id}/records/` | HOD or scoped staff + `attendance.record_attendance`; `student` UUID, `event_id` UUID, `reason` | 201 new event, 200 duplicate/retry; `{event_id, duplicate, replayed}`. |
+| `correctAttendanceRecord` | `POST /api/attendance/records/{record_id}/correct/` | HOD or scoped staff + `attendance.correct_attendance`; `status` (`present` or `absent`), `reason` | 200 `{id, status}`; correction history retained. |
+| `getMyAttendance` | `GET /api/me/attendance/` | Signed in with linked student; `page` | 200 own paginated records only. |
+
+Roster suggestions include active undergraduates at the offering level and those
+whose latest eligible verified/scored earlier attempt failed under its saved
+grading version. HOD confirms actual registration, including additions/removals;
+suggestions are not automatic enrollment. Each opened class freezes the approved
+roster revision. Later roster/level changes do not rewrite that snapshot.
+
+Class responses contain `id`, `offering`, `title`, `starts_at`, `ends_at`, `status`,
+`roster_revision`, `closed_at`. Supply timezone-aware ISO-8601 start/end timestamps,
+with end after start. A current offering and confirmed roster are required. New
+manual events require an open class within its inclusive time window and an
+eligible active undergraduate. Reasons are nonblank and at most 1000 characters.
+One record exists per class/student: a new duplicate event does not overwrite it.
+Exact authorized retries retain the same event UUID and payload, including after
+closure; changed payloads or revoked access cannot use retry to bypass checks.
+
+Staff record rows contain `id`, `student_id`, `status`, `recorded_at`,
+`recorded_by_id`, `reason`; own-student rows contain `id`, `session_id`,
+`session__offering_id`, `status`, `recorded_at`. Missing rows are not automatically
+absences. Cancel/reopen, excused-class rules, percentages and warnings remain
+unfinished. The agreed future threshold is 75%, excluding formally excused classes
+from the denominator; the current API does not calculate it.
+
+#### Pending USB capture uploads
+
+| Client method | HTTP route | Response |
+| --- | --- | --- |
+| `previewPendingCaptures` | `POST /api/attendance/sessions/{session_id}/pending-batches/preview/` | 200 validated metadata and whole-file `file_sha256`; no persistence. |
+| `importPendingCaptures` | `POST /api/attendance/sessions/{session_id}/pending-batches/` | 201 new receipt or 200 exact-file retry. |
+| `listPendingCaptureBatches` | `GET /api/attendance/sessions/{session_id}/pending-batches/` | 200 paginated metadata, counts and review flags. |
+
+All three require active staff with `attendance.import_pending_captures` and course
+visibility; HOD satisfies the permission through active superuser access. Ordinary
+staff need the separate view permission and current course assignment. Closed or
+expired classes can accept evidence for later review.
+
+POST the original JSONL file bytes with `Content-Type: application/x-ndjson` and
+the usual CSRF header/cookie. Import additionally requires `X-Capture-SHA256` equal
+to preview's whole-file `file_sha256`, not the JSONL trailer's prefix digest.
+JSON wrappers and multipart FormData are unsupported; ordinary JSON client helpers
+must not be used for these two writes. Limits: 2 MiB/file, 512 events,
+4096 bytes/line, 2048 decoded bytes/probe. See the linked format contract rather
+than inventing student IDs, matric numbers or scanner slots in capture records.
+
+Import revalidates access and bytes atomically. Exact retries preserve the original
+receipt; snapshots can append to the same immutable prefix, and older prefixes
+remain safely retryable. Changed evidence or reused event identities return 409;
+invalid files return 400 and unsupported content types 415. Rejections write no
+partial evidence. Receipt fields include `receipt_id`, `file_sha256`, `received_at`,
+`event_count`, `new_events`, `existing_events`, `batch_event_count`, `replayed`.
+
+Every imported batch remains `pending_review`, with identity/timing review required
+and `device_authenticated=false`. Imports never mark attendance or create warnings.
+No response exposes probe bytes, and no raw-probe read/export API exists. Receipt
+time is not capture time; boot IDs/uptime do not establish trusted wall-clock time.
+A receipt never authorizes deletion of the device file. Restricted student bindings,
+matching/reconciliation, trusted clocks, authenticated devices, retention/encryption
+and field operation remain unfinished.
+
+```javascript
+// These examples use the shared JSON helpers above; raw uploads need a separate helper.
+export const getCurrentAcademicSession = (signal) =>
+  apiGet("/api/academic-sessions/current/", {}, signal);
+export const selectCurrentAcademicSession = (academicSession, expectedSessionId) =>
+  apiPut("/api/academic-sessions/current/", {
+    academic_session: academicSession, expected_session_id: expectedSessionId,
+  });
+export const getAttendanceSession = (sessionId, signal) =>
+  apiGet(`/api/attendance/sessions/${pathId(sessionId)}/`, {}, signal);
+export const recordManualAttendance = (sessionId, event) =>
+  apiPost(`/api/attendance/sessions/${pathId(sessionId)}/records/`, event);
+// Preserve event_id and the entire payload on an exact retry. Never call this
+// manual endpoint to claim that an unidentified fingerprint has been matched.
+```
+
 ## 9. Implemented guardian result-sharing methods
 
 ### 9.1 Route catalog
@@ -1204,12 +1324,43 @@ batch; configuration/business failures return 400 rather than partially
 queueing. `RESULT_SHARING_ENABLED` defaults false. SMTP/Meta setup and a regularly
 scheduled `process_result_shares` worker are required for actual submissions.
 The worker rechecks result/contact/preference snapshots before submission.
-Transport adapters and the durable queue exist, but production scheduling,
-PostgreSQL concurrency and live provider acceptance remain unfinished.
+Transport adapters and the durable queue exist. The user confirmed a live Gmail
+mock receipt; the page/worker integration used in-memory email and synthetic data.
+Production worker activation, sharing-worker PostgreSQL concurrency and Meta
+acceptance remain unfinished.
 
 All sharing endpoints use no-store caching. Keep private reports and destinations
 out of browser localStorage, analytics and application logs. Queue status may be
 read with ordinary GET polling; no WebSocket or SSE connection is implemented.
+
+### 9.5 Implemented React page and email worker
+
+The separate [guardian-results page](frontend/guardian-results/README.md) implements
+HOD departmental login, student/period selection, guardian email permission,
+preview and explicit review/send, status polling, history and known-failure retry.
+Its [API adapter](frontend/guardian-results/src/api.js) is ready for integration
+into the finished React frontend. The disposable demo links to it. New batches
+from this page use email only; historical mixed-channel batches are view-only.
+Gmail credentials remain on the server, separate from departmental login.
+
+Run the email worker from the configured administrator environment:
+
+```powershell
+.\.venv\Scripts\python.exe manage.py process_result_shares --channel email --watch --interval 5 --limit 25
+```
+
+Without --watch it exits after the bounded limit; in watch mode the limit applies
+per pass. --channel email leaves WhatsApp jobs queued; omitting --channel processes
+both. Stop requests finish the current submission. No automatic retry is made for
+unknown outcomes. Deployment templates are in deploy/; no production service has
+been installed or activated. API and worker must use the same database/config.
+
+For Gmail setup/connection checks and the synthetic receipt command, see
+[guardian-email-setup.md](docs/guardian-email-setup.md). Use a Google App Password
+with the configured SMTP authentication method; never put credentials in React or
+this reference. [Validation record](docs/guardian-result-sharing-validation.md):
+13 frontend tests/build passed; full backend run succeeded with 360 tests and
+15 PostgreSQL-only skips, with no migration drift. This is not production approval.
 
 ## 10. Calling methods from React screens
 
@@ -1430,11 +1581,11 @@ payloads, roles and state transitions still need a reviewed contract.
 | --- | --- | --- |
 | `uploadImportFile`, `previewImport`, `commitImport`, `getImportStatus` | Upload extracted CSV, validate rows/conflicts, show a review, and atomically accept it with safe re-import behavior. | No active import routes. PDF/CSV scripts are local tools; staging, provenance, conflict reporting and safe commit are unfinished. |
 | `createRegistrationDraft`, `updateRegistrationDraft`, `submitRegistration`, `reviewRegistration` | Save/select courses, submit to an adviser, return for correction or approve enrollment. | Browser demo only; registration models/routes, validation and review transitions need implementation. Course catalogs are not registrations. |
-| `listLecturerCourses`, `listCourseRoster`, `submitResultBatch`, `reviewResultBatch` | Scope a lecturer to assigned courses and review an entered/uploaded batch of scores. | No lecturer-course backend assignment/roster or draft/submitted/returned batch state. Existing result APIs manage individual rows and verification. |
+| `listLecturerCourses`, `listCourseRoster`, `submitResultBatch`, `reviewResultBatch` | Scope a lecturer to assigned courses and review an entered/uploaded batch of scores. | Attendance-specific course assignments and confirmed rosters now exist (8.6); they do not grant lecturer result access. No lecturer result-batch draft/submitted/returned state exists. Existing result APIs manage individual rows and verification. |
 | `exportAcademicResults`, `downloadTranscript` | Download reviewed period-specific academic reports or an official transcript. | Only student-profile CSV export exists. Result-sharing messages are not CSV/PDF transcripts. Report scope, format and authority need implementation. |
 | `updateMyStudentProfile` | Let a student edit explicitly allowed own contact fields. | `/api/me/student/` is read-only. Staff PATCH is not student self-service. |
 | `listAdviserAssignments`, `listStaffChoices`, `createAdviserAssignment`, `updateAdviserAssignment` | Feed React selectors and administer adviser/staff assignment changes. | Models/admin exist, but no React JSON assignment/account-list APIs. `auth/me/` provides levels only. |
-| `createLecturerAssignment`, `updateLecturerAssignment` | Administer course-based lecturer access. | Prototype only; current production access uses staff permissions and adviser-level scope. |
+| `createLecturerAssignment`, `updateLecturerAssignment` | Administer course-based lecturer access. | Attendance-only course assignments exist (8.6). General lecturer profile/result access remains unfinished; academic APIs use staff permissions and adviser scope. |
 | `listStudentCatalogChoices` | Supply permitted sessions/courses/offerings to student/adviser screens. | Current catalogs are HOD-only. Broader selector access and field/scope rules need reviewed API support. |
 | `listTimetable`, `updateTimetable`, `publishTimetable` | Read schedules and publish authorized time/venue changes. | Prototype only; no active timetable API. |
 | `uploadLearningResource`, `listLearningResources`, `downloadLearningResource` | Publish and privately retrieve permitted course materials. | Prototype only; file storage, validation, access and download APIs are unfinished. |
@@ -1482,14 +1633,14 @@ Device registry, enrollment/mapping, actual sensor capabilities, authentication,
 expiry/replay rejection, deduplication and integration tests are unfinished.
 Fingerprint capture/templates/matching belong to the separately reviewed
 biometric design; the React student-record API is not a biometric upload API.
-Attendance/class-session functionality also has no active API and needs an
-explicit scope before implementation.
+Attendance/class sessions and pending JSONL ingestion are implemented in 8.6.
+They do not implement identity-check routes or prove device/student identity.
 
 ### 11.3 Communication approaches not configured
 
 | Approach | Status and intended use |
 | --- | --- |
-| Multipart `FormData` upload | No implemented application upload route. Appropriate for future file imports/attachments after a contract exists. The JSON helper cannot send FormData; a future upload helper must let the browser set its multipart boundary. |
+| Multipart `FormData` upload | No multipart application upload route. Pending attendance captures use raw application/x-ndjson (8.6); future CSV imports/attachments need their own contract. The JSON helper cannot send FormData; a future upload helper must let the browser set its multipart boundary. |
 | WebSocket | No implemented socket endpoint/consumer. A possible future push channel for terminal outcomes or notifications; requires its own authentication and message contract. |
 | Server-sent events (SSE) | No implemented event stream. Ordinary GET status reads exist for sharing batches. |
 | GraphQL | No schema or endpoint. Current methods use REST routes. |
@@ -1506,12 +1657,13 @@ the unfinished methods available.
 
 | Existing capability | Work still required |
 | --- | --- |
-| Login/current identity/logout | Build React auth state, protected navigation, role/permission-aware controls, expiry handling and same-origin proxy; verify real-browser cookie/CSRF behavior. |
+| Login/current identity/logout | Implemented and browser-verified for the guardian-email page. Extend shared auth/navigation to the finished frontend and other screens. |
 | Password change/reset and account provisioning | Build React pages; configure reset URL/SMTP and shared throttle cache; validate mail/browser recovery flow and initial credential handling. |
 | Students/guardians and profile export | Build real React directory/edit/export controls with scope checks and loading/empty/denied states; verify actual browser downloads. |
 | Individual results, grading and graduation | Build authorized screens, independent verification controls, digest-based review and clear completeness handling; validate approved rules/data in PostgreSQL. |
 | Adviser/HOD messaging | Build actual compose/inbox screens; provide an agreed assignment/recipient selection source without inventing IDs or widening access. |
-| Guardian preview/queue/history/retry | Build explicit HOD preview/send controls; configure SMTP/Meta template/token/version and worker scheduling; validate PostgreSQL concurrency and provider sandbox acceptance. |
+| Guardian preview/queue/history/retry | Email React controls and polling worker are implemented; Gmail mock receipt confirmed. Merge into the finished frontend, activate supervised production worker, configure Meta template/token/version and validate sharing concurrency/provider delivery. |
+| Attendance/classes and pending uploads | APIs exist (8.6); React controls, reviewed student binding/matching/reconciliation, trusted timing, device authentication and completed-class/excused/75% metrics remain unfinished. |
 | Provider delivery outcomes | Add authenticated webhooks/reconciliation for delivered/read/bounce status. Current `accepted` remains submission acceptance only. |
 | Database and deployment | Reconcile the shared source schema/data, prepare a dedicated PostgreSQL target, validate migrations/recovery, configure HTTPS/proxy/secrets/monitoring and complete deployment checks. |
 | Sensitive-action auditing | Record profile/result/verification/import/bulk/permission events; existing latest-review records are not a complete immutable audit system. |
@@ -1531,6 +1683,9 @@ before changing a feature's implemented status.
 | Student profiles, filtering, transitions | [app/students/urls.py](app/students/urls.py), [views.py](app/students/views.py), [serializers.py](app/students/serializers.py), [services.py](app/students/services.py) |
 | Guardians and profile CSV | [app/students/guardian_views.py](app/students/guardian_views.py), [export_views.py](app/students/export_views.py) |
 | Academics, catalogs, grading and review | [app/academics/urls.py](app/academics/urls.py), [views.py](app/academics/views.py), [serializers.py](app/academics/serializers.py), [services.py](app/academics/services.py), [graduation.py](app/academics/graduation.py), [calculations.py](app/academics/calculations.py) |
+| Current academic session | [app/academics/current_session_views.py](app/academics/current_session_views.py), [current_session.py](app/academics/current_session.py) |
+| Attendance and pending uploads | [app/attendance/urls.py](app/attendance/urls.py), [views.py](app/attendance/views.py), [pending_views.py](app/attendance/pending_views.py), [docs/attendance-pending-batches.md](docs/attendance-pending-batches.md) |
+| Guardian React integration | [frontend/guardian-results/README.md](frontend/guardian-results/README.md), [src/api.js](frontend/guardian-results/src/api.js) |
 | Guardian result sharing | [app/academics/sharing_views.py](app/academics/sharing_views.py), [sharing.py](app/academics/sharing.py), [sharing_worker.py](app/academics/sharing_worker.py), [sharing_transport.py](app/academics/sharing_transport.py) |
 | Deployment/auth settings | [app/config/settings.py](app/config/settings.py), [.env.example](.env.example) |
 | Additional contract detail | [docs/backend-lifecycle-guide.md](docs/backend-lifecycle-guide.md), [docs/academics-api.md](docs/academics-api.md), [docs/guardian-result-sharing.md](docs/guardian-result-sharing.md) |
