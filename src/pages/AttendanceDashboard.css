@@ -17,6 +17,8 @@
   flex: 0 0 248px;
   flex-direction: column;
   height: 100vh;
+  min-width: 0;
+  overflow-y: auto;
   padding: 26px 18px 20px;
   background: #132a4a;
   color: #e8eff9;
@@ -158,12 +160,78 @@
 
 .attendance-topbar {
   display: flex;
-  height: 69px;
+  min-height: 69px;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   border-bottom: 1px solid var(--attendance-line);
   padding: 0 4.2%;
   background: #fff;
+}
+
+.attendance-topbar h1 {
+  margin: 0;
+  color: var(--attendance-ink);
+  font-size: clamp(20px, 2.6vw, 28px);
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+}
+
+.attendance-status-chip {
+  flex: 0 0 auto;
+  border: 1px solid #d8eadf;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #eff8f2;
+  color: #39865e;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.attendance-userbox {
+  display: grid;
+  gap: 5px;
+  margin-top: auto;
+  border: 1px solid #2b4668;
+  border-radius: 9px;
+  padding: 12px 10px;
+}
+
+.attendance-user-label {
+  color: #91a7c5;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.attendance-userbox strong {
+  overflow-wrap: anywhere;
+  color: #e8eff9;
+  font-size: 11px;
+}
+
+.attendance-userbox small {
+  color: #a9bad1;
+  font-size: 10px;
+}
+
+.attendance-signout {
+  width: 100%;
+  margin-top: 12px;
+  border: 1px solid #466184;
+  border-radius: 8px;
+  padding: 10px;
+  background: transparent;
+  color: #d5e0ef;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+}
+
+.attendance-signout:hover {
+  background: #1b385e;
+  color: white;
 }
 
 .breadcrumb {
@@ -282,7 +350,8 @@
   color: #695a30;
 }
 
-.attendance-stats {
+.attendance-stats,
+.attendance-stat-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 13px;
@@ -339,6 +408,7 @@
 
 .scanner-panel,
 .scan-upload-panel,
+.session-panel,
 .records-panel,
 .access-panel {
   margin-top: 16px;
@@ -346,6 +416,59 @@
   border-radius: 9px;
   background: #fff;
   box-shadow: 0 2px 8px rgb(26 44 73 / 2%);
+}
+
+.session-panel {
+  padding: 18px 20px 4px;
+}
+
+.attendance-session-list {
+  margin-top: 14px;
+}
+
+.attendance-session-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-top: 1px solid #eef1f5;
+  padding: 12px 0;
+  color: #526176;
+  font-size: 11px;
+}
+
+.attendance-session-item > div {
+  min-width: 0;
+}
+
+.attendance-session-item strong,
+.attendance-session-item small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.attendance-session-item strong {
+  color: #34435a;
+}
+
+.attendance-session-item small {
+  margin-top: 4px;
+  color: #8995a5;
+  font-size: 9px;
+}
+
+.attendance-session-item > span {
+  flex: 0 0 auto;
+  color: #68768a;
+  text-align: right;
+}
+
+.session-panel .empty-records {
+  margin: 0;
+  color: #8995a5;
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .scanner-panel {
@@ -885,6 +1008,11 @@
     flex-basis: 205px;
   }
 
+  .attendance-stats,
+  .attendance-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .scanner-panel {
     grid-template-columns: 1fr 150px;
   }
@@ -910,6 +1038,7 @@
     position: static;
     flex: 0 0 auto;
     height: auto;
+    overflow: visible;
     padding: 14px;
   }
 
@@ -950,13 +1079,26 @@
     margin-top: 10px;
   }
 
-  .sidebar-signout {
-    flex: 0 0 auto;
+  .attendance-userbox {
+    margin-top: 12px;
+  }
+
+  .attendance-signout {
+    width: auto;
+    align-self: flex-end;
+    text-align: center;
   }
 
   .attendance-topbar {
-    height: 59px;
-    padding: 0 15px;
+    height: auto;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 15px;
+  }
+
+  .sidebar-signout {
+    flex: 0 0 auto;
   }
 
   .attendance-user strong {
@@ -991,7 +1133,8 @@
     font-size: 16px;
   }
 
-  .attendance-stats {
+  .attendance-stats,
+  .attendance-stat-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1017,6 +1160,20 @@
   .access-panel,
   .scan-upload-panel {
     padding: 15px 12px 3px;
+  }
+
+  .session-panel {
+    padding: 15px 12px 3px;
+  }
+
+  .attendance-session-item {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .attendance-session-item > span {
+    text-align: left;
   }
 
   .scan-upload-panel {
@@ -1055,7 +1212,8 @@
     max-width: 90px;
   }
 
-  .attendance-stats {
+  .attendance-stats,
+  .attendance-stat-grid {
     gap: 8px;
   }
 

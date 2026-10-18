@@ -100,7 +100,7 @@ function StatCard({ label, value, detail }) {
 
 function Panel({ title, subtitle, children, className: extraClass = "" }) {
   return (
-    <section className={`${className} p-5 sm:p-6 ${extraClass}`}>
+    <section className={`${className} min-w-0 p-5 sm:p-6 ${extraClass}`}>
       {(title || subtitle) && (
         <div className="mb-5">
           {title && <h2 className="text-lg font-bold text-white">{title}</h2>}
@@ -726,7 +726,7 @@ export default function Portal() {
 
   return (
     <main className="min-h-screen bg-[#080b12] px-4 py-8 text-white sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto min-w-0 max-w-7xl">
         <div className="mb-7 flex flex-col gap-4 rounded-2xl border border-blue-400/20 bg-gradient-to-r from-blue-950/80 via-slate-950 to-black p-5 sm:flex-row sm:items-center sm:justify-between">
           <div><p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">EEE OAU · Academic portal</p><h2 className="mt-2 text-xl font-bold">{roles[role].title}</h2><p className="mt-1 text-sm text-slate-400">{roles[role].welcome} · Demo data</p></div>
           <div className="flex flex-wrap items-center gap-3">
@@ -739,8 +739,8 @@ export default function Portal() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
-          <aside className={`${className} h-fit p-3`} aria-label="Portal navigation">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+          <aside className={`${className} h-fit min-w-0 p-3`} aria-label="Portal navigation">
             <p className="px-3 pb-3 pt-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Workspace</p>
             <nav className="flex gap-2 overflow-x-auto lg:flex-col">
               {menu.map(([key, label]) => (
