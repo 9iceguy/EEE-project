@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import Sectionheader from "../components/Sectionheader";
+import { useAuth } from "../auth/useAuth";
+import StudentRegistry from "./StudentRegistry";
 
 const roles = {
   student: { title: "Student", welcome: "Your academic workspace" },
@@ -28,6 +30,7 @@ const navigation = {
     ["courses", "Course management"],
     ["results", "Results management"],
     ["students", "Student records"],
+    ["register-student", "Register student"],
     ["communication", "Communication"],
     ["timetable", "Timetable"],
   ],
@@ -45,6 +48,7 @@ const navigation = {
     ["dashboard", "Advising dashboard"],
     ["profile", "Profile"],
     ["students", "Assigned students"],
+    ["register-student", "Register student"],
     ["academic-summary", "Academic summaries"],
     ["approvals", "Registration review"],
     ["records", "Advising records"],
@@ -553,9 +557,11 @@ function Dashboard({ role, navigateTo }) {
       <div className="mt-6 grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
         <Panel title={isStudent ? "Next steps" : "Needs your attention"} subtitle="Your most important pending items">
           <div className="space-y-3">
-            {(isHod || isAdviser
+            {(isHod
               ? [["Review course registrations", "Several student submissions are awaiting review.", "approvals", "Open approval queue"], ["Check department activity", "Review current workloads and open requests.", "reports", "View activity"]]
-              : [["Prepare result submissions", "Save a draft before the departmental deadline.", "results", "Manage results"], ["Check assigned classes", "Review enrolment and course resources.", "courses", "Open courses"]]
+              : isAdviser
+                ? [["Register a student", "Create a student profile using the official admission details.", "register-student", "Open registration"], ["Review registrations", "Course-registration review is not connected to the API yet.", "approvals", "View review queue"]]
+                : [["Prepare result submissions", "Save a draft before the departmental deadline.", "results", "Manage results"], ["Register a student", "Add a student profile to records available to your account.", "register-student", "Open registration"]]
             ).map(([titleText, detail, section, action]) => (
               <div key={titleText} className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-black/30 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div><h3 className="font-semibold text-white">{titleText}</h3><p className="mt-1 text-sm text-slate-400">{detail}</p></div>
@@ -670,6 +676,14 @@ function PortalContent({ role, section, notify }) {
     return <><PageHeading eyebrow="Updates" title="Notifications" description="Registration decisions, new materials, announcements and reminders."/><Panel title="Recent notifications"><ul className="divide-y divide-slate-800">{[["Registration closes soon", "Course registration closes on 18 October.", "Today · Reminder"], ["New learning resource", "EEE 301 lecture notes for weeks 1–4 are available.", "Yesterday · Resource"], ["Department seminar", "Seminar room 2, Friday at 2:00 PM.", "12 Sep · Announcement"]].map(([title, detail, meta]) => <li key={title} className="flex gap-4 py-4"><span className="mt-1 size-2 shrink-0 rounded-full bg-blue-400"/><div><p className="font-semibold text-white">{title}</p><p className="mt-1 text-sm text-slate-400">{detail}</p><p className="mt-2 text-xs text-slate-500">{meta}</p></div></li>)}</ul></Panel></>;
   }
 
+  if (section === "students" && ["staff", "adviser"].includes(role)) {
+    return <StudentRegistry role={role} />;
+  }
+
+  if (section === "register-student" && ["staff", "adviser"].includes(role)) {
+    return <StudentRegistry mode="register" role={role} />;
+  }
+
   if (section === "students" || section === "academic-summary") {
     return <><PageHeading eyebrow={role === "adviser" ? "Advising" : "Records"} title={section === "academic-summary" ? "Student academic summaries" : "Student records"} description="Search authorised cohort records and review academic activity."/><Panel title={role === "adviser" ? "Assigned 300-level cohort" : "Department students"} subtitle="Access is restricted to records permitted for your role."><label className="mb-4 block max-w-md text-sm text-slate-300">Search by student name or matric number<input className={`${fieldClass} mt-2`} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="e.g. EEE/2022/014"/></label><DataTable headers={["Student", "Matric number", "Level", "Registration"]} rows={filteredStudents.map((student) => [student.name, student.matric, student.level, <Status key={student.matric}>{student.status}</Status>])}/>{filteredStudents.length === 0 && <p className="py-6 text-center text-sm text-slate-400">No matching students found.</p>}</Panel></>;
   }
@@ -712,39 +726,94 @@ function PortalContent({ role, section, notify }) {
 export default function Portal() {
   const { role: requestedRole = "student", section: requestedSection = "dashboard" } = useParams();
   const navigate = useNavigate();
-  const role = Object.hasOwn(roles, requestedRole) ? requestedRole : "student";
+  const { user, status, error: authError, signOut } = useAuth();
+  const isPartAdviser = user?.role === "staff"
+    && Array.isArray(user.adviser_levels)
+    && user.adviser_levels.length > 0;
+  const role = requestedRole === "adviser" && isPartAdviser ? "adviser" : user?.role;
+  const hasValidRole = !!user && (requestedRole === user.role || (requestedRole === "adviser" && isPartAdviser));
+
+  if (status === "loading") {
+    return <main className="flex min-h-screen items-center justify-center bg-[#080b12] px-4 text-sm text-blue-200" role="status">Restoring your secure portal session...</main>;
+  }
+
+  if (!user) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#080b12] px-4 text-white">
+        <section className="w-full max-w-lg rounded-3xl border border-blue-400/20 bg-slate-950 p-8 shadow-2xl shadow-blue-950/30">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">EEE OAU · Academic portal</p>
+          <h1 className="mt-3 text-2xl font-bold">Sign in to access your workspace</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-400">
+            {authError?.message || "This portal requires an authenticated account. Your access is checked again by the API for each operation."}
+          </p>
+          <Link to="/login" className={`${primaryButton} mt-6 inline-flex`}>Continue to sign in</Link>
+        </section>
+      </main>
+    );
+  }
+
+  if (!Object.hasOwn(roles, role)) {
+    return <Navigate to="/access-denied" replace />;
+  }
+
+  if (!hasValidRole) {
+    const actualRolePath = user.role === "staff" ? "staff" : user.role;
+    return <Navigate to={`/portal/${actualRolePath}/dashboard`} replace />;
+  }
+
   const menu = navigation[role];
   const section = menu.some(([key]) => key === requestedSection) ? requestedSection : "dashboard";
   const currentLabel = menu.find(([key]) => key === section)?.[1] || "Dashboard";
 
-  const changeRole = (event) => navigate(`/portal/${event.target.value}/dashboard`);
   const navigateTo = (targetSection) => navigate(`/portal/${role}/${targetSection}`);
-  const logout = () => {
-    toast.info("Demo portal: no authenticated session is active.", { position: "top-center" });
-    navigate("/");
+  const logout = async () => {
+    try {
+      await signOut();
+      toast.success("Signed out successfully.", { position: "top-center" });
+      navigate("/login");
+    } catch (logoutError) {
+      toast.error(logoutError.message || "Unable to sign out. Please try again.", { position: "top-center" });
+    }
   };
+  const displayName = [user.first_name, user.last_name].filter(Boolean).join(" ") || user.username;
+  const workspaceOptions = user.role === "staff" && isPartAdviser
+    ? ["staff", "adviser"]
+    : [user.role];
 
   return (
-    <main className="min-h-screen bg-[#080b12] px-4 py-8 text-white sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_#172b52_0%,_#0b1322_42%,_#080b12_100%)] px-4 py-6 text-white sm:px-6 sm:py-8 lg:px-8">
       <div className="mx-auto min-w-0 max-w-7xl">
-        <div className="mb-7 flex flex-col gap-4 rounded-2xl border border-blue-400/20 bg-gradient-to-r from-blue-950/80 via-slate-950 to-black p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div><p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">EEE OAU · Academic portal</p><h2 className="mt-2 text-xl font-bold">{roles[role].title}</h2><p className="mt-1 text-sm text-slate-400">{roles[role].welcome} · Demo data</p></div>
+        <div className="mb-7 flex flex-col gap-5 rounded-3xl border border-blue-300/20 bg-gradient-to-r from-blue-950/95 via-slate-950 to-slate-950 p-5 shadow-2xl shadow-blue-950/20 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div className="flex items-center gap-4">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-blue-300/20 bg-blue-400/10 text-lg font-black text-blue-200" aria-hidden="true">E</span>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">EEE OAU · Academic portal</p>
+              <h2 className="mt-1 text-xl font-bold">{roles[role].title}</h2>
+              <p className="mt-1 text-sm text-slate-400">{roles[role].welcome} · Signed in as {displayName}</p>
+            </div>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
-            <label className="sr-only" htmlFor="role-switcher">Switch portal role</label>
-            <select id="role-switcher" value={role} onChange={changeRole} className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-white focus:border-blue-400 focus:outline-none">
-              {Object.entries(roles).map(([value, item]) => <option key={value} value={value}>{item.title}</option>)}
-            </select>
+            {workspaceOptions.length > 1 && (
+              <div className="flex rounded-xl border border-slate-700 bg-slate-900/80 p-1" aria-label="Your workspaces">
+                {workspaceOptions.map((workspace) => (
+                  <Link key={workspace} to={`/portal/${workspace}/dashboard`} aria-current={role === workspace ? "page" : undefined} className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${role === workspace ? "bg-blue-600 text-white" : "text-slate-300 hover:text-white"}`}>
+                    {roles[workspace].title}
+                  </Link>
+                ))}
+              </div>
+            )}
+            <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200">Secure session active</span>
             <Link to="/session-expired" className={secondaryButton}>Session help</Link>
-            <button className={secondaryButton} onClick={logout}>Log out</button>
+            <button type="button" className={secondaryButton} onClick={logout}>Log out</button>
           </div>
         </div>
 
-        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
-          <aside className={`${className} h-fit min-w-0 p-3`} aria-label="Portal navigation">
-            <p className="px-3 pb-3 pt-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Workspace</p>
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
+          <aside className={`${className} h-fit min-w-0 p-3 sm:p-4`} aria-label="Portal navigation">
+            <p className="px-3 pb-3 pt-2 text-xs font-bold uppercase tracking-[0.18em] text-blue-300/80">Workspace menu</p>
             <nav className="flex gap-2 overflow-x-auto lg:flex-col">
               {menu.map(([key, label]) => (
-                <Link key={key} to={`/portal/${role}/${key}`} aria-current={section === key ? "page" : undefined} className={`shrink-0 rounded-xl px-3 py-2.5 text-sm transition lg:shrink ${section === key ? "bg-blue-600 font-semibold text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}>
+                <Link key={key} to={`/portal/${role}/${key}`} aria-current={section === key ? "page" : undefined} className={`shrink-0 rounded-xl px-3 py-3 text-sm transition lg:shrink ${section === key ? "bg-gradient-to-r from-blue-600 to-blue-500 font-semibold text-white shadow-lg shadow-blue-950/30" : "text-slate-300 hover:bg-slate-800/80 hover:text-white"}`}>
                   {label}
                 </Link>
               ))}
@@ -758,7 +827,7 @@ export default function Portal() {
           <div className="min-w-0">
             <div className="mb-4 flex items-center gap-2 text-xs text-slate-500"><span>Workspace</span><span aria-hidden="true">/</span><span className="text-slate-300">{currentLabel}</span></div>
             <PortalContent role={role} section={section} notify={navigateTo}/>
-            <p className="mt-6 text-center text-xs text-slate-600">Prototype only. This screen uses illustrative data; changes are not persisted or sent to staff.</p>
+            <p className="mt-6 text-center text-xs leading-5 text-slate-500">Student records and registration use the live API. Other portal workflows may still show illustrative prototype data.</p>
           </div>
         </div>
       </div>

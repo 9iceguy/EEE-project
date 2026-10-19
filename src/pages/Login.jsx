@@ -19,7 +19,12 @@ const Login = () => {
       const identity = await signIn(username.trim(), password);
       setPassword("");
       toast.success("Signed in successfully.", { position: "top-center" });
-      navigate(`/portal/${identity.role}/dashboard`);
+      const workspace = identity.role === "staff"
+        && Array.isArray(identity.adviser_levels)
+        && identity.adviser_levels.length > 0
+        ? "adviser"
+        : identity.role;
+      navigate(`/portal/${workspace}/dashboard`);
     } catch (error) {
       const retryAfter = error.retryAfter
         ? ` The server asked you to wait: ${error.retryAfter}.`
