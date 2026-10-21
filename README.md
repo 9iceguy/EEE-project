@@ -1,5 +1,5 @@
 # EEE OAU frontend
-
+The web application to the departmental student filing system for the Electrical and Electronic Engineering project at Obafemi Awolowo University (OAU). It will organise student files and academic records, with a controlled interface to a separate student identity terminal.
 React application built with Vite.
 
 ## Run locally
