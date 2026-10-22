@@ -65,7 +65,7 @@ const Header = () => {
             </div>
           </div>
         </Link>
-        <div className="flex flex-wrap items-center justify-center gap-2">
+        <div className="flex flex-wrap items-start justify-center gap-2">
           <Navbar />
           {user ? (
             <div className="flex items-center gap-3">

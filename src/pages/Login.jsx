@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Sectionheader from "../components/Sectionheader";
 import { useAuth } from "../auth/useAuth";
+import logo from "../assets/logo.png";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -322,10 +323,10 @@ const Login = () => {
           border-radius: 12px;
           overflow: hidden;
           border: 1px solid rgba(31, 69, 126, 0.15);
-          background-image: url("https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=80");
           background-size: cover;
           background-position: center;
           box-shadow: 0 10px 28px rgba(34, 57, 89, 0.18);
+          
         }
 
         .visual-badge {
@@ -498,7 +499,12 @@ const Login = () => {
               </div>
 
               <div className="visual">
-                <div className="visual-frame" aria-label="Student learning" />
+                <div
+                  className="visual-frame"
+                  role="img"
+                  aria-label="Student learning"
+                  style={{ backgroundImage: `url("${logo}")` }}
+                />
               </div>
             </div>
           </section>
